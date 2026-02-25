@@ -5,8 +5,8 @@ def add_customer(first, last, email):
     try:
         mydb = mysql.connector.connect(
             host="localhost",
-            user="csuser",
-            password="yourpassword",
+            user="admin",
+            password="1234",
             database="smartstoreiotproject_db"
         )
 

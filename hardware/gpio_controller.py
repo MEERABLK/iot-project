@@ -4,6 +4,7 @@ import time
     
 #GPIO setup
 GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
 successLed = 17
 failLed = 16
@@ -34,7 +35,7 @@ def failure():
 def cleanup():
     GPIO.cleanup()
 
-"""success()
-time.sleep(2)
-failure()
-GPIO.cleanup()"""
+#success()
+#time.sleep(2)
+#failure()
+#GPIO.cleanup()
