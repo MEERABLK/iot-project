@@ -1,20 +1,48 @@
-# app.py
+import tkinter as tk
+from tkinter import messagebox
 from db.database import add_customer
-from hardware.gpio_controller import success, failure, cleanup
-import time
-import RPi.GPIO as GPIO
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+try:
+    from hardware.gpio_controller import success, failure
+except (ImportError, ModuleNotFoundError):
+    def success(): print("Hardware: Blue LED ON")
+    def failure(): print("Hardware: Red LED & Buzzer ON")
 
-result = add_customer("Melissa", "Smith", "melissa.smith@gmail.com")
+def handle_submit():
+    first = entry_first.get().strip()
+    last = entry_last.get().strip()
+    email = entry_email.get().strip()
 
-if result:
-    print("Customer added successfully!")
-    success()
-else:
-    print("Insert failed.")
-    failure()
+    if not first or not last or not email:
+        messagebox.showwarning("Input Error", "Please fill in First Name, Last Name, and Email.")
+        return
 
-time.sleep(2)
-cleanup()
+    if add_customer(first, last, email):
+        messagebox.showinfo("Success", f"Customer {first} added!")
+        success() 
+    else:
+        messagebox.showerror("Error", "Database insertion failed.")
+        failure() 
+
+root = tk.Tk()
+root.title("Vanier IoT - Phase 1")
+root.geometry("300x400")
+
+tk.Label(root, text="Customer Registration", font=("Arial", 12, "bold")).pack(pady=10)
+
+tk.Label(root, text="First Name:").pack()
+entry_first = tk.Entry(root)
+entry_first.pack(pady=5)
+
+tk.Label(root, text="Last Name:").pack()
+entry_last = tk.Entry(root)
+entry_last.pack(pady=5)
+
+tk.Label(root, text="Email:").pack()
+entry_email = tk.Entry(root)
+entry_email.pack(pady=5)
+
+btn_submit = tk.Button(root, text="Add Customer", command=handle_submit, bg="blue", fg="white")
+btn_submit.pack(pady=20)
+
+root.mainloop()
