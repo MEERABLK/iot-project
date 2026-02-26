@@ -10,7 +10,7 @@ db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
 
 
-def add_customer(first, last, email):
+def add_customer(first, last, email, phone, address, city, province, postal_code):
     try:
         mydb = mysql.connector.connect(
             host=db_host,
@@ -21,8 +21,8 @@ def add_customer(first, last, email):
 
         mycursor = mydb.cursor()
 
-        sql = "INSERT INTO customers (first_name, last_name, email) VALUES (%s, %s, %s)"
-        values = (first, last, email)
+        sql = "INSERT INTO customers (first_name, last_name, email, phone, address, city, province, postal_code) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        values = (first, last, email, phone, address, city, province, postal_code)
 
         mycursor.execute(sql, values)
         mydb.commit()
