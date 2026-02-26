@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from db.database import add_customer
+import validators
 
 try:
     from hardware.gpio_controller import success, failure
@@ -16,7 +17,9 @@ def handle_submit():
     if not first or not last or not email:
         messagebox.showwarning("Input Error", "Please fill in First Name, Last Name, and Email.")
         return
-
+    if not validators.email(email):
+        messagebox.showwarning("Input Error", "Please enter email format example abcd@gmail.com")
+        return
     if add_customer(first, last, email):
         messagebox.showinfo("Success", f"Customer {first} added!")
         success() 
