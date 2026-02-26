@@ -1,12 +1,21 @@
 # database.py
 import mysql.connector
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # loads variables from .env
+
+db_host = os.getenv("DB_HOST")
+db_user = os.getenv("DB_USER")
+db_password = os.getenv("DB_PASSWORD")
+
 
 def add_customer(first, last, email):
     try:
         mydb = mysql.connector.connect(
-            host="localhost",
-            user="admin",
-            password="root123",
+            host=db_host,
+            user=db_user,
+            password=db_password,
             database="smartstoreiotproject_db"
         )
 
