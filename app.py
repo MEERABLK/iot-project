@@ -16,9 +16,11 @@ def handle_submit():
 
     if not first or not last or not email:
         messagebox.showwarning("Input Error", "Please fill in First Name, Last Name, and Email.")
+        failure() 
         return
     if not validators.email(email):
         messagebox.showwarning("Input Error", "Please enter email format example abcd@gmail.com")
+        failure() 
         return
     if add_customer(first, last, email):
         messagebox.showinfo("Success", f"Customer {first} added!")
