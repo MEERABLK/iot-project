@@ -33,7 +33,7 @@ def send_email(subject, body, sender, recipients, password):
         print("Message sent!")
 
 #Step #6 call the method: the password is an app password that can be generated from here https://myaccount.google.com/apppasswords
-send_email("Test Subject", "This is the body of the email", "lowkey_mischievous", ["lowkey_miscchievous"], "ibrx juqy lako brbr")
+send_email("Test Subject", "This is the body of the email", "lowkey_mischievous", ["lowkey_mischievous"], "ibrx juqy lako brbr")
 
 
 """
