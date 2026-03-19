@@ -44,6 +44,9 @@ def spinMotor():
     GPIO.output(Motor3,GPIO.LOW)
 
 def stopMotor():
+    GPIO.setup(Motor1,GPIO.OUT)
+    GPIO.setup(Motor2,GPIO.OUT)
+    GPIO.setup(Motor3,GPIO.OUT)
     GPIO.output(Motor1,GPIO.LOW)
     GPIO.output(Motor2,GPIO.LOW)
     GPIO.output(Motor3,GPIO.LOW)

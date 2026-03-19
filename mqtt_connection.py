@@ -1,12 +1,13 @@
 import paho.mqtt.client as mqtt
 from hardware.gpio_controller import spinMotor, stopMotor
 
+#THIS IS FOR TESTING ONLY IMPLEMENTATION NEEDS TO BE PUT IN THE INDEX.PY FILE
 BROKER = "192.168.0.146"
 PORT = 1883
 
 # ✅ Global variables
-temperature = None
-humidity = None
+temperature = 0
+humidity = 0
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code", rc)
