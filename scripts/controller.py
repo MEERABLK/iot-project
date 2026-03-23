@@ -57,8 +57,7 @@ class Controller:
 
     def get_fridge2_humidity(self):
         return self.data.fridge2Humidity
-    
-    
+
     def check_fridge1_temperature(self, threshold=8):
         temp = self.data.fridge1Temperature
         if temp is not None and temp > threshold:
@@ -78,7 +77,84 @@ class Controller:
             user_input = input("Reply YES to turn on fan: ").strip().upper()
             if user_input == "YES":
                 print("Turning on fan...")
+    
+    
+    def monitor_temperatures(self, threshold=8):
+        fridge1_alert_sent = False
+        fridge2_alert_sent = False
+
+        while True:
+            f1 = self.data.fridge1Temperature
+            f2 = self.data.fridge2Temperature
+
+            print("----- TEMPERATURE CHECK -----")
+
+            # ===== FRIDGE 1 =====
+            if f1 is not None:
+                print(f"Fridge 1: {f1}°C")
+
+                if f1 > threshold:
+                    print("⚠️ Fridge 1 temperature too high!")
+
+                    # Send email once
+                    if not fridge1_alert_sent:
+                        send_email.send_email(
+                            subject="Fridge 1 Alert 🚨",
+                            body=f"Fridge 1 temperature is {f1}°C.\nReply YES to turn on the fan.",
+                            sender=self.email_address,
+                            recipients=["you@gmail.com"],
+                            password=self.email_password
+                        )
+                        fridge1_alert_sent = True
+
+                    # ✅ Check for YES reply
+                    if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
+                        print("🔥 Turning ON fan for Fridge 1")
+                        gpio_controller.spinMotor()
+                        time.sleep(5)
+                        gpio_controller.stopMotor()
+
+                        fridge1_alert_sent = False  # reset after action
+
+                else:
+                    fridge1_alert_sent = False
+
             else:
-                print("No action taken.")
-        else:
-            self.email_sent = False
+                print("Fridge 1: No data")
+
+            # ===== FRIDGE 2 =====
+            if f2 is not None:
+                print(f"Fridge 2: {f2}°C")
+
+                if f2 > threshold:
+                    print("⚠️ Fridge 2 temperature too high!")
+
+                    # Send email once
+                    if not fridge2_alert_sent:
+                        send_email.send_email(
+                            subject="Fridge 2 Alert 🚨",
+                            body=f"Fridge 2 temperature is {f2}°C.\nReply YES to turn on the fan.",
+                            sender=self.email_address,
+                            recipients=["you@gmail.com"],
+                            password=self.email_password
+                        )
+                        fridge2_alert_sent = True
+
+                    # ✅ Check for YES reply
+                    if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
+                        print("🔥 Turning ON fan for Fridge 2")
+                        gpio_controller.spinMotor()
+                        time.sleep(5)
+                        gpio_controller.stopMotor()
+
+                        fridge2_alert_sent = False  # reset after action
+
+                else:
+                    fridge2_alert_sent = False
+
+            else:
+                print("Fridge 2: No data")
+
+            print("-----------------------------\n")
+
+            time.sleep(5)

@@ -54,4 +54,6 @@ def cleanup():
 #success()
 #time.sleep(2)
 #failure()
-#GPIO.cleanup()
+# spinMotor()
+# stopMotor()
+GPIO.cleanup()

@@ -15,7 +15,7 @@ controller = Controller()
 
 controller.start()
 controller.data.fridge1Temperature = 10
-controller.check_fridge1_temperature()
+controller.monitor_temperatures()
 while True:
     print("Fridge1 Temp:", controller.get_fridge1_temp())
     print("Fridge1 Hum:", controller.get_fridge1_humidity())
