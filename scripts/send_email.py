@@ -6,7 +6,8 @@ from email.header import decode_header
 import time
 
 # ✅ IMPORT YOUR GPIO CONTROL
-import gpio_controller
+from scripts import gpio_controller
+# import gpio_controller
 
 
 # =========================
@@ -67,7 +68,9 @@ def check_reply_to_test_subject(username, password):
             print("📩 Found reply!")
             print("Body:", body)
 
-            if "YES" in body.upper():
+            first_line = body.strip().splitlines()[0]
+
+            if first_line.upper() == "YES":
                 print("✅ YES DETECTED!")
                 mail.logout()
                 return True

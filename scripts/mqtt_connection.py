@@ -2,7 +2,8 @@ import time
 import paho.mqtt.client as mqtt
 from sensor_data import data
 #BROKER = "192.168.0.146"
-BROKER = "10.0.0.136"
+#BROKER = "10.0.0.136"
+BROKER = "172.20.10.4"
 PORT = 1883
 
 # Global variables
