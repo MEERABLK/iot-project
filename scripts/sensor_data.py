@@ -1,6 +1,7 @@
 import paho.mqtt.client as mqtt
 
-BROKER = "172.20.10.4"
+#BROKER = "172.20.10.4"
+BROKER = "10.0.0.136"
 PORT = 1883
 
 class SensorData:
