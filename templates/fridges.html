@@ -21,6 +21,35 @@
                 </button>
             </form>
         </div>
+        <p>Fridge 1 Temp: <span id="f1_temp">--</span></p>
+        <p>Fridge 1 Humidity: <span id="f1_humidity">--</span></p>
+
+        <p>Fridge 2 Temp: <span id="f2_temp">--</span></p>
+        <p>Fridge 2 Humidity: <span id="f2_humidity">--</span></p>
     </div>
 </body>
+
+<script>
+async function fetchTemps() {
+    try {
+        const response = await fetch('/api/temps');
+        const data = await response.json();
+
+        document.getElementById('f1_temp').textContent = data.fridge1_temp ?? '--';
+        document.getElementById('f1_humidity').textContent = data.fridge1_humidity ?? '--';
+
+        document.getElementById('f2_temp').textContent = data.fridge2_temp ?? '--';
+        document.getElementById('f2_humidity').textContent = data.fridge2_humidity ?? '--';
+
+    } catch (error) {
+        console.error("Error fetching temps:", error);
+    }
+}
+
+// refresh every 2 seconds
+setInterval(fetchTemps, 2000);
+
+// run immediately on page load
+fetchTemps();
+</script>
 </html>

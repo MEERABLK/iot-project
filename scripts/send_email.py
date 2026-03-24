@@ -87,29 +87,55 @@ EMAIL = "lowkeymischievous@gmail.com"
 PASSWORD = "ibrx juqy lako brbr"
 
 # ✅ SEND TEST EMAIL
-send_email(
-    subject="Test Subject",
-    body="Reply YES to turn on the fan",
-    sender=EMAIL,
-    recipients=[EMAIL],
-    password=PASSWORD
-)
+# send_email(
+#     subject="Test Subject",
+#     body="Reply YES to turn on the fan",
+#     sender=EMAIL,
+#     recipients=[EMAIL],
+#     password=PASSWORD
+# )
 
 # =========================
 # 🔄 WAIT FOR REPLY
 # =========================
-while True:
-    print("⏳ Checking for reply...")
+# while True:
+#     print("⏳ Checking for reply...")
 
-    if check_reply_to_test_subject(EMAIL, PASSWORD):
-        print("🔥 TURNING FAN ON...")
+#     if check_reply_to_test_subject(EMAIL, PASSWORD):
+#         print("🔥 TURNING FAN ON...")
 
-        gpio_controller.spinMotor()   # ✅ FAN ON
+#         gpio_controller.spinMotor()   # ✅ FAN ON
 
-        time.sleep(5)                 # run for 5 sec (optional)
+#         time.sleep(5)                 # run for 5 sec (optional)
 
-        gpio_controller.stopMotor()  # ✅ FAN OFF (optional)
+#         gpio_controller.stopMotor()  # ✅ FAN OFF (optional)
 
-        break
+#         break
 
-    time.sleep(5)
+#     time.sleep(5)
+if __name__ == "__main__":
+    EMAIL = "email"
+    PASSWORD = "password"
+
+    send_email(
+        subject="Test Subject",
+        body="Reply YES to turn on the fan",
+        sender=EMAIL,
+        recipients=[EMAIL],
+        password=PASSWORD
+    )
+    while True:
+        print("⏳ Checking for reply...")
+
+        if check_reply_to_test_subject(EMAIL, PASSWORD):
+            print("🔥 TURNING FAN ON...")
+
+            gpio_controller.spinMotor()   # ✅ FAN ON
+
+            time.sleep(5)                 # run for 5 sec (optional)
+
+            gpio_controller.stopMotor()  # ✅ FAN OFF (optional)
+
+            break
+
+        time.sleep(5)
