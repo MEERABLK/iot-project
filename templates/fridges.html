@@ -4,8 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fridges</title>
+
+    <link rel="stylesheet" href="../static/css/style.css">
+
 </head>
 <body>
-    
+    <div class="container">
+        <h2>Fridges</h2>
+        <div class="collection collection-vertical collection-shade-1">
+            <h3>Send email</h3>
+            <p>Enter the email to send to...</p>
+            <form action="/send_email" method="POST">
+                <input type="email" name="email" id="email" required="true">
+                <button class="button" type="submit">
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
