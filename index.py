@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 
 from scripts.controller import Controller
+import scripts.gpio_controller as gpio
 import time
 
 controller = Controller()
@@ -46,6 +47,17 @@ def handle_send_email():
 
 @app.route('/api/update-fan', methods=['POST'])
 def handle_fan():
+    data = request.get_json()
+
+    if 'fridge1' in data :
+        fridge1 = data.get('fridge1')
+
+        if fridge1 is True :
+            gpio.spinMotor()
+        else :
+            gpio.stopMotor()
+    
+
     return jsonify({"status": "success"})
 
 @app.route('/api/temps')
