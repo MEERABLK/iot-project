@@ -26,6 +26,7 @@ def fridges():
     )
     # return render_template(
     #     'fridges.html',
+    #     back_button=
     #     fridge1_temp=controller.get_fridge1_temp(),
     #     fridge1_humidity=controller.get_fridge1_humidity(),
     #     fridge2_temp=controller.get_fridge2_temp(),

@@ -125,6 +125,26 @@ button {
     width: 150px;
 }
 
+.button-back {
+    position: absolute;
+    flex: 0;
+    top: 15px;
+    left: 15px;
+    width: 50px;
+    aspect-ratio: 1/1;
+
+    border-radius: 50px;
+}
+
+.button-back .arrow {
+    height: 20px;
+    width: 20px;
+    border-left: 5px solid #b16940;
+    border-bottom: 5px solid #b16940;
+    transform: rotate(45deg);
+    transition: 0.2s ease;
+}
+
 .button:hover {
     background-color: #ffd8a4;
     border-left: 5px solid #eba272;
