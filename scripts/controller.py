@@ -39,7 +39,7 @@ class Controller:
                         subject="Fridge Alert 🚨",
                         body=f"Temp too high: {self.data.fridge1Temperature}. Would you like to turn on the fan?",
                         sender=EMAIL_ADDRESS,
-                        recipients=["you@gmail.com"],
+                        recipients=["lowkeymischievous@gmail.com"],
                         password=EMAIL_PASSWORD
                     )
 
@@ -102,7 +102,7 @@ class Controller:
                             subject="Fridge 1 Alert 🚨",
                             body=f"Fridge 1 temperature is {f1}°C.\nReply YES to turn on the fan.",
                             sender=self.email_address,
-                            recipients=["you@gmail.com"],
+                            recipients=["lowkeymischievous@gmail.com"],
                             password=self.email_password
                         )
                         fridge1_alert_sent = True
@@ -135,7 +135,7 @@ class Controller:
                             subject="Fridge 2 Alert 🚨",
                             body=f"Fridge 2 temperature is {f2}°C.\nReply YES to turn on the fan.",
                             sender=self.email_address,
-                            recipients=["you@gmail.com"],
+                            recipients=["lowkeymischievous@gmail.com"],
                             password=self.email_password
                         )
                         fridge2_alert_sent = True
