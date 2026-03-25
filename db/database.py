@@ -19,7 +19,7 @@ def get_threshold(fridge_name):
 
         mycursor = mydb.cursor()
 
-        sql = "SELECT temperature_threshold FROM fridge_thresholds WHERE fridge_name = %s"
+        sql = "SELECT temperature_threshold FROM thresholds WHERE fridge_name = %s"
         mycursor.execute(sql, (fridge_name,))
 
         result = mycursor.fetchone()

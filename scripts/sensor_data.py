@@ -3,8 +3,8 @@ import os
 from dotenv import load_dotenv
 
 # BROKER = os.getenv("BROKER_IP")
-BROKER = "172.20.10.4"
-# BROKER = "10.0.0.136"
+#BROKER = "172.20.10.4"
+BROKER = "10.0.0.136"
 # BROKER = "127.0.0.1"
 PORT = 1883
 
