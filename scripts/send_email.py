@@ -1,15 +1,22 @@
+
+
+# =========================
+# 📚 IMPORTS
+# =========================
 import smtplib
 from email.mime.text import MIMEText
 import imaplib
 import email
 from email.header import decode_header
 import time
+
 from db.database import get_threshold
+import scripts.gpio_controller as gpio_controller
 
-# ✅ IMPORT YOUR GPIO CONTROL
-from scripts import gpio_controller
-# import gpio_controller
 
+# =========================
+# ⚙️ CONFIG
+# =========================
 fridge_name = "fridge1"
 
 threshold = get_threshold(fridge_name)
@@ -17,6 +24,7 @@ threshold = get_threshold(fridge_name)
 if threshold is None:
     print("No threshold found, using default 8°C")
     threshold = 8
+
 
 # =========================
 # 📧 SEND EMAIL FUNCTION
@@ -46,7 +54,7 @@ def check_reply_to_test_subject(username, password):
     result, data = mail.search(None, 'ALL')
     email_ids = data[0].split()
 
-    # check latest emails
+    # check latest 10 emails
     for e_id in reversed(email_ids[-10:]):
         result, msg_data = mail.fetch(e_id, '(RFC822)')
         raw_email = msg_data[0][1]
@@ -60,7 +68,7 @@ def check_reply_to_test_subject(username, password):
             if isinstance(subject, bytes):
                 subject = subject.decode(encoding if encoding else "utf-8")
 
-        # ONLY CHECK REPLIES TO TEST SUBJECT
+        # ONLY CHECK REPLIES
         if subject and "Re: Test Subject" in subject:
 
             body = ""
@@ -90,49 +98,11 @@ def check_reply_to_test_subject(username, password):
 # =========================
 # 🚀 MAIN PROGRAM
 # =========================
-
-EMAIL = "lowkeymischievous@gmail.com"
-PASSWORD = "ibrx juqy lako brbr"
-
-# ✅ SEND TEST EMAIL
-# send_email(
-#     subject="Test Subject",
-#     body="Reply YES to turn on the fan",
-#     sender=EMAIL,
-#     recipients=[EMAIL],
-#     password=PASSWORD
-# )
-
-# =========================
-# 🔄 WAIT FOR REPLY
-# =========================
-# while True:
-#     print("⏳ Checking for reply...")
-
-#     if check_reply_to_test_subject(EMAIL, PASSWORD):
-#         print("🔥 TURNING FAN ON...")
-
-<<<<<<< Updated upstream
-#         gpio_controller.spinMotor()   # ✅ FAN ON
-
-#         time.sleep(5)                 # run for 5 sec (optional)
-
-#         gpio_controller.stopMotor()  # ✅ FAN OFF (optional)
-=======
-        gpio_controller.spinMotor()   
-
-        time.sleep(5)                 
-
-        gpio_controller.stopMotor()  
->>>>>>> Stashed changes
-
-#         break
-
-#     time.sleep(5)
 if __name__ == "__main__":
-    EMAIL = "email"
-    PASSWORD = "password"
+    EMAIL = "your_email@gmail.com"
+    PASSWORD = "your_app_password"
 
+    # SEND TEST EMAIL
     send_email(
         subject="Test Subject",
         body="Reply YES to turn on the fan",
@@ -140,17 +110,19 @@ if __name__ == "__main__":
         recipients=[EMAIL],
         password=PASSWORD
     )
+
+    # WAIT FOR REPLY
     while True:
         print("⏳ Checking for reply...")
 
         if check_reply_to_test_subject(EMAIL, PASSWORD):
             print("🔥 TURNING FAN ON...")
 
-            gpio_controller.spinMotor()   # ✅ FAN ON
+            gpio_controller.spinMotor()
 
-            time.sleep(5)                 # run for 5 sec (optional)
+            time.sleep(5)
 
-            gpio_controller.stopMotor()  # ✅ FAN OFF (optional)
+            gpio_controller.stopMotor()
 
             break
 
