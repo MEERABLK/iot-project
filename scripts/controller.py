@@ -79,7 +79,7 @@ class Controller:
                 print("Turning on fan...")
     
     
-    def monitor_temperatures(self, threshold=8):
+    def monitor_temperatures(self, recipient, threshold=8):
         fridge1_alert_sent = False
         fridge2_alert_sent = False
 
@@ -102,7 +102,7 @@ class Controller:
                             subject="Fridge 1 Alert 🚨",
                             body=f"Fridge 1 temperature is {f1}°C.\nReply YES to turn on the fan.",
                             sender=self.email_address,
-                            recipients=["lowkeymischievous@gmail.com"],
+                            recipients=[recipient],
                             password=self.email_password
                         )
                         fridge1_alert_sent = True

@@ -157,3 +157,43 @@ button {
     border: none;
     transform: translate(-2px, 2px);
 }
+
+.toggle-body {
+    position: relative;
+    background-color: #ff736e;
+    height: 30px;
+    aspect-ratio: 2/1;
+
+    margin: 0 5px;
+
+    border-radius: 25px;
+    border: 2px solid #dedede;
+
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.toggle-on {
+    background-color: #5afd75;
+}
+
+.toggle-switch {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    background-color: #ffffff;
+
+    height: calc(100% - 4px);
+    aspect-ratio: 1/1;
+
+    border-radius: 25px;
+    border: 2px solid #ff9895;
+
+    transition: 0.2s ease;
+}
+
+.toggle-on > .toggle-switch {
+    transform: translateX(calc(60px - (100% - 4px) - 4px));
+    border-color: #96ff9c;
+}
