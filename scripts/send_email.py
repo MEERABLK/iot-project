@@ -9,6 +9,7 @@ import imaplib
 import email
 from email.header import decode_header
 import time
+from db.database import get_threshold
 
 from db.database import get_threshold
 import scripts.gpio_controller as gpio_controller
@@ -25,6 +26,13 @@ if threshold is None:
     print("No threshold found, using default 8°C")
     threshold = 8
 
+fridge_name = "fridge1"
+
+threshold = get_threshold(fridge_name)
+
+if threshold is None:
+    print("No threshold found, using default 8°C")
+    threshold = 8
 
 # =========================
 # 📧 SEND EMAIL FUNCTION
@@ -68,7 +76,11 @@ def check_reply_to_test_subject(username, password):
             if isinstance(subject, bytes):
                 subject = subject.decode(encoding if encoding else "utf-8")
 
+<<<<<<< Updated upstream
         # ONLY CHECK REPLIES
+=======
+        # ONLY CHECK REPLIES TO TEST SUBJECT
+>>>>>>> Stashed changes
         if subject and "Re: Test Subject" in subject:
 
             body = ""
@@ -120,10 +132,18 @@ if __name__ == "__main__":
 
             gpio_controller.spinMotor()
 
+<<<<<<< Updated upstream
             time.sleep(5)
 
             gpio_controller.stopMotor()
 
             break
+=======
+        gpio_controller.spinMotor()   
+
+        time.sleep(5)                 
+
+        gpio_controller.stopMotor()  
+>>>>>>> Stashed changes
 
         time.sleep(5)
