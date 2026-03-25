@@ -2,14 +2,40 @@
 import mysql.connector
 from dotenv import load_dotenv
 import os
-
 load_dotenv()  # loads variables from .env
 
 db_host = os.getenv("DB_HOST")
 db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
 
+def get_threshold(fridge_name):
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
 
+        mycursor = mydb.cursor()
+
+        sql = "SELECT temperature_threshold FROM fridge_thresholds WHERE fridge_name = %s"
+        mycursor.execute(sql, (fridge_name,))
+
+        result = mycursor.fetchone()
+
+        mycursor.close()
+        mydb.close()
+
+        if result:
+            return result[0]  # return threshold value
+        else:
+            return None
+
+    except mysql.connector.Error as err:
+        print("Database Error:", err)
+        return None
+        
 def add_customer(first, last, email, phone, address, city, province, postal_code):
     try:
         mydb = mysql.connector.connect(
