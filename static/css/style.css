@@ -43,7 +43,7 @@ input {
     border-radius: 10px;
     margin: 5px;
 
-    width: clamp(150px, 30vw, 50vw);
+    flex: 1;
 }
 
 button {
@@ -52,7 +52,8 @@ button {
     color: white;
 }
 .alert {
-    padding: 10px; margin-bottom: 20px; border: 1px solid transparent;
+    padding: 10px;
+    border: 1px solid transparent;
 }
 
 .success {
@@ -63,6 +64,10 @@ button {
 }
 .danger {
     color: red;
+}
+
+#email-form {
+    display: flex;
 }
 
 .container {

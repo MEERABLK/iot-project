@@ -21,6 +21,9 @@ def index():
 
 @app.route('/fridges')
 def fridges():
+    # return render_template(
+    #     'fridges.html'
+    # )
     return render_template(
         'fridges.html',
         fridge1_temp=controller.get_fridge1_temp(),

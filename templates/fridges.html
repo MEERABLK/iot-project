@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fridges</title>
 
-    <link rel="stylesheet" href="../static/css/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
 </head>
 <body>
@@ -14,8 +14,8 @@
         <h3>Send email</h3>
         <div class="collection collection-vertical collection-shade-1">
             <p>Enter the email to send to...</p>
-            <form action="/send_email" method="POST">
-                <input type="email" name="email" id="email" required="true">
+            <form action="/send_email" method="POST" id="email-form">
+                <input type="email" name="email" id="email" required="true" placeholder="iot@example.com">
                 <button class="button" type="submit">
                     Send
                 </button>
