@@ -28,9 +28,9 @@ h3 {
     text-align: center;
     font-size: 2rem;
 
-    padding: 0;
+    margin: 10px;
 
-    color: #ffedd2;
+    color: #d4a669;
 }
 
 a {
@@ -51,6 +51,19 @@ button {
     border: none;
     color: white;
 }
+.alert {
+    padding: 10px; margin-bottom: 20px; border: 1px solid transparent;
+}
+
+.success {
+    color: green;
+}
+.warning {
+    color: yellow;
+}
+.danger {
+    color: red;
+}
 
 .container {
     display: flex;
@@ -65,8 +78,9 @@ button {
     justify-content: center;
     align-items: center;
 
-    border-radius: 50px;
-    padding: 50px;
+    border-radius: 30px;
+    padding: 30px;
+    margin: 10px;
 }
 
 .collection-vertical {
@@ -74,7 +88,15 @@ button {
 }
 
 .collection-shade-1 {
-    background-color: #eead82;
+    background-color: #f1b68e;
+}
+
+.collection-shade-2 {
+    background-color: #ffd595;
+}
+
+.collection-shade-3 {
+    background-color: #ff9895;
 }
 
 .button {

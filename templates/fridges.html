@@ -11,8 +11,8 @@
 <body>
     <div class="container">
         <h2>Fridges</h2>
+        <h3>Send email</h3>
         <div class="collection collection-vertical collection-shade-1">
-            <h3>Send email</h3>
             <p>Enter the email to send to...</p>
             <form action="/send_email" method="POST">
                 <input type="email" name="email" id="email" required="true">
@@ -20,12 +20,26 @@
                     Send
                 </button>
             </form>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
         </div>
-        <p>Fridge 1 Temp: <span id="f1_temp">--</span></p>
-        <p>Fridge 1 Humidity: <span id="f1_humidity">--</span></p>
 
-        <p>Fridge 2 Temp: <span id="f2_temp">--</span></p>
-        <p>Fridge 2 Humidity: <span id="f2_humidity">--</span></p>
+        <h3>Fridge 1</h3>
+        <div class="collection collection-shade-2">
+            <div class="collection collection-shade-3">Temp: <span id="f1_temp">--</span></div>
+            <div class="collection collection-shade-3">Humidity: <span id="f1_humidity">--</span></div>
+        </div>
+
+        <h3>Fridge 2</h3>
+        <div class="collection collection-shade-2">
+            <div class="collection collection-shade-3">Temp: <span id="f2_temp">--</span></div>
+            <div class="collection collection-shade-3">Humidity: <span id="f2_humidity">--</span></div>
+        </div>
     </div>
 </body>
 
