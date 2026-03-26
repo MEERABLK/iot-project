@@ -20,9 +20,13 @@ class Controller:
         self.data = data
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
+
         self.last_email_time = time.time()
 
         self.fridge1_alert_sent = False
+
+        self.threshold = 8
+
 
     def start(self):
         # Start MQTT listener
@@ -128,7 +132,7 @@ class Controller:
                 print("Turning on fan...")
     
     
-    def monitor_temperatures(self, recipient, threshold=8):
+    def monitor_temperatures(self, recipient):
         fridge1_alert_sent = False
         fridge2_alert_sent = False
 
@@ -142,7 +146,7 @@ class Controller:
             if f1 is not None:
                 print(f"Fridge 1: {f1}°C")
 
-                if f1 > threshold:
+                if f1 > self.threshold:
                     print("⚠️ Fridge 1 temperature too high!")
 
                     # Send email once
@@ -175,7 +179,7 @@ class Controller:
             if f2 is not None:
                 print(f"Fridge 2: {f2}°C")
 
-                if f2 > threshold:
+                if f2 > self.threshold:
                     print("⚠️ Fridge 2 temperature too high!")
 
                     # Send email once

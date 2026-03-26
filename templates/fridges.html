@@ -15,16 +15,18 @@
         <h3>Send email</h3>
         <div class="collection collection-vertical collection-shade-1">
             <p>Enter the email to send to...</p>
-            <form action="/send_email" method="POST" id="email-form">
+            <form action="/send_email" method="POST" id="email-form" class="form">
                 <input type="email" name="email" id="email" required="true" placeholder="iot@example.com">
-                <button class="button" type="submit">
-                    Send
-                </button>
+                <button class="button" type="submit">Send</button>
             </form>
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                <div class="alert {{ category }}">{{ message }}</div>
+                {% if category.startswith('mail') %}
+                    <div class="alert {{ category }}">
+                    {{ message }}
+                    </div>
+                {% endif %}
                 {% endfor %}
             {% endif %}
             {% endwith %}
@@ -32,8 +34,33 @@
 
         <h3>Fridge 1</h3>
         <div class="collection collection-shade-2">
-            <div class="collection collection-shade-3">Temp: <span id="f1_temp">--</span></div>
-            <div class="collection collection-shade-3">Humidity: <span id="f1_humidity">--</span></div>
+            <div class="collection collection-vertical collection-shade-3">
+                <p>Temperature threshold</p>
+                <div class="display-value">{{ threshold }}</div>
+                <form action="/set_threshold/1" method="POST" id="threshold-form" class="form">
+                    <input type="number" name="threshold" id="threshold">
+                    <button class="button" type="submit">Set</button>
+                </form>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    {% if category.startswith('temp1') %}
+                        <div class="alert {{ category }}">
+                        {{ message }}
+                        </div>
+                    {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+            <div class="collection collection-vertical collection-shade-3">
+                <div>Temp</div>
+                <div id="f1_temp" class="display-value">--</div>
+            </div>
+            <div class="collection collection-vertical collection-shade-3">
+                <div>Humidity</div>
+                <div id="f1_humidity" class="display-value">--</div>
+            </div>
             <div class="collection collection-shade-1">
                 Fan
                 <div class="toggle-body" id="fridge1-toggle">
@@ -44,8 +71,33 @@
 
         <h3>Fridge 2</h3>
         <div class="collection collection-shade-2">
-            <div class="collection collection-shade-3">Temp: <span id="f2_temp">--</span></div>
-            <div class="collection collection-shade-3">Humidity: <span id="f2_humidity">--</span></div>
+            <div class="collection collection-vertical collection-shade-3">
+                <p>Temperature threshold</p>
+                <div class="display-value">{{ threshold }}</div>
+                <form action="/set_threshold/2" method="POST" id="threshold-form" class="form">
+                    <input type="number" name="threshold" id="threshold">
+                    <button class="button" type="submit">Set</button>
+                </form>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    {% if category.startswith('temp2') %}
+                        <div class="alert {{ category }}">
+                        {{ message }}
+                        </div>
+                    {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+            <div class="collection collection-vertical collection-shade-3">
+                <div>Temp</div>
+                <div id="f2_temp" class="display-value">--</div>
+            </div>
+            <div class="collection collection-vertical collection-shade-3">
+                <div>Humidity</div>
+                <div id="f2_humidity" class="display-value">--</div>
+            </div>
             <div class="collection collection-shade-1">
                 Fan
                 <div class="toggle-body" id="fridge2-toggle">

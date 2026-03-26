@@ -27,6 +27,7 @@ def fridges():
     # )
     return render_template(
         'fridges.html',
+        threshold=controller.threshold,
         fridge1_temp=controller.get_fridge1_temp(),
         fridge1_humidity=controller.get_fridge1_humidity(),
         fridge2_temp=controller.get_fridge2_temp(),
@@ -39,9 +40,21 @@ def handle_send_email():
 
     if email:
         controller.monitor_temperatures(email)
-        flash("Email sent!", "success")
+        flash("Email sent!", "mail success")
     else:
-        flash("Invalid email", "error")       
+        flash("Invalid email", "mail error")       
+
+    return redirect(url_for('fridges'))
+
+@app.route('/set_threshold/<int:fridge_id>', methods=['POST'])
+def handle_set_threshold(fridge_id):
+    threshold = request.form.get('threshold', '')
+
+    try:
+        # controller.threshold = float(threshold)
+        flash("Threshold updated", f"temp{fridge_id} success")
+    except (TypeError, ValueError):
+        flash("Invalid value", f"temp{fridge_id} error") 
 
     return redirect(url_for('fridges'))
 
@@ -56,7 +69,6 @@ def handle_fan():
             gpio.spinMotor()
         else :
             gpio.stopMotor()
-    
 
     return jsonify({"status": "success"})
 
