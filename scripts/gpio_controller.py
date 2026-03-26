@@ -61,4 +61,4 @@ def cleanup():
 #failure()
 # spinMotor()
 # stopMotor()
-GPIO.cleanup()
+# GPIO.cleanup()

@@ -38,6 +38,7 @@ def get_threshold(fridge_name):
     
 def set_threshold(fridge_name, threshold_value):
     mydb = None
+    print(fridge_name, threshold_value)
     try:
         value = float(threshold_value)
 
