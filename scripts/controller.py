@@ -92,9 +92,11 @@ class Controller:
                     print("🔥 Turning ON fan")
                     gpio_controller.spinMotor()
                     self.toggle_on(1)
+                    self.toggle_on(2)
                     time.sleep(5)
-                    gpio_controller.stopMotor()
-                    self.toggle_off(1)
+                    # gpio_controller.stopMotor()
+                    # self.toggle_off(1)
+                    # self.toggle_off(2)
                     
 
                     self.fridge1_alert_sent = False  # reset after action
