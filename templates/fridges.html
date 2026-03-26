@@ -152,17 +152,19 @@ function init() {
         // Update the UI based on what Python tells us
         if (data.toggle_on) {
             fridge1Toggle.classList.add('toggle-on');
+            console.log('toggle on');
         } else {
             fridge1Toggle.classList.remove('toggle-on');
+            console.log('toggle off');
         }
 
-        fetch('/api/update-fan', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ fridge1: data.toggle_on })
-         });
+        // fetch('/api/update-fan', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify({ fridge1: data.toggle_on })
+        //  });
     });
 
     socket.on('toggle2_updated', function(data) {
@@ -172,13 +174,13 @@ function init() {
             fridge2Toggle.classList.remove('toggle-on');
         }
 
-        fetch('/api/update-fan', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ fridge2: data.toggle_on })
-         });
+        // fetch('/api/update-fan', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify({ fridge2: data.toggle_on })
+        //  });
     });
 }
 

@@ -14,12 +14,14 @@ app.secret_key = "iot_vanier_1"
 socketio = SocketIO(app)
 
 def toggle_on(id):
+    print("Toggling on")
     socketio.emit(f'toggle{id}_updated', {'toggle_on': True})
 
 def toggle_off(id):
+    print("Toggling off")
     socketio.emit(f'toggle{id}_updated', {'toggle_on': False})
 
-controller = Controller(toggle_on)
+controller = Controller(toggle_on, toggle_off)
 
 load_dotenv("credentials.env")
 

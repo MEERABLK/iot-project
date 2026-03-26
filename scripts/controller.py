@@ -17,7 +17,7 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 
 class Controller:
-    def __init__(self, toggle_callback):
+    def __init__(self, toggle_on, toggle_off):
         self.data = data
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
@@ -26,7 +26,8 @@ class Controller:
         self.fridge1_alert_sent = False
         self.threshold = 8
 
-        self.toggle_callback = toggle_callback  # 👈 store function
+        self.toggle_on = toggle_on  # 👈 store function
+        self.toggle_off = toggle_off
 
 
     def start(self):
@@ -77,7 +78,7 @@ class Controller:
                         subject="Fridge Alert 🚨",
                         body=f"The following temperatures are too high:\n\n{message}\nReply YES to turn on the fan.",
                         sender=self.email_address,
-                        recipients=["lowkeymischievous@gmail.com"],
+                        recipients=["jonathan.markovic@outlook.com"],
                         password=self.email_password
                     )
                     self.fridge1_alert_sent = True
@@ -87,8 +88,11 @@ class Controller:
                 elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
                     print("🔥 Turning ON fan")
                     gpio_controller.spinMotor()
+                    self.toggle_on(1)
                     time.sleep(5)
                     gpio_controller.stopMotor()
+                    self.toggle_off(1)
+                    
 
                     self.fridge1_alert_sent = False  # reset after action
 
@@ -164,7 +168,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 1")
-                        self.toggle_callback(1)
+                        self.toggle_on(1)
                         fridge1_alert_sent = False  # reset after action
 
                 else:
@@ -194,7 +198,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 2")
-                        self.toggle_callback(2)
+                        self.toggle_on(2)
 
                         fridge2_alert_sent = False  # reset after action
 
