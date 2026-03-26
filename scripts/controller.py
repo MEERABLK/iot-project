@@ -2,6 +2,7 @@
 from scripts.sensor_data import data, start as start_mqtt
 from scripts import gpio_controller
 from scripts import send_email
+import index
 import threading
 import time
 from dotenv import load_dotenv
@@ -163,9 +164,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 1")
-                        gpio_controller.spinMotor()
-                        time.sleep(5)
-                        gpio_controller.stopMotor()
+                        index.toggle_on(1)
 
                         fridge1_alert_sent = False  # reset after action
 
@@ -196,9 +195,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 2")
-                        gpio_controller.spinMotor()
-                        time.sleep(5)
-                        gpio_controller.stopMotor()
+                        index.toggle_on(2)
 
                         fridge2_alert_sent = False  # reset after action
 
@@ -211,3 +208,4 @@ class Controller:
             print("-----------------------------\n")
 
             time.sleep(5)
+    

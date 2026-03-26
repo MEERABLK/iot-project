@@ -2,6 +2,7 @@
 import os
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_socketio import SocketIO as socketio
 
 from scripts.controller import Controller
 import scripts.gpio_controller as gpio
@@ -90,9 +91,13 @@ if __name__ == '__main__':
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         threading.Thread(target=controller.start, daemon=True).start()
     
-    app.run(debug=True)
+    socketio.run(debug=True)
 
+def toggle_on(id):
+    socketio.emit(f'toggle{id}_updated', {'toggle_on': True})
 
+def toggle_off(id):
+    socketio.emit(f'toggle{id}_updated', {'toggle_on': False})
 
 # controller = Controller()
 # #controller = Controller(email_address=EMAIL_ADDRESS, email_password=EMAIL_PASSWORD)
