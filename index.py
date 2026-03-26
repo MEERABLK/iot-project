@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 
 from scripts.controller import Controller
 import scripts.gpio_controller as gpio
+import db.database as data
 import time
 
 controller = Controller()
@@ -48,10 +49,10 @@ def handle_send_email():
 
 @app.route('/set_threshold/<int:fridge_id>', methods=['POST'])
 def handle_set_threshold(fridge_id):
-    threshold = request.form.get('threshold', '')
+    threshold = request.form.get('threshold', 'Bad value')
 
     try:
-        # controller.threshold = float(threshold)
+        data.set_threshold(f"fridge{fridge_id}", float(threshold))
         flash("Threshold updated", f"temp{fridge_id} success")
     except (TypeError, ValueError):
         flash("Invalid value", f"temp{fridge_id} error") 

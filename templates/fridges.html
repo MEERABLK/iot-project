@@ -38,7 +38,7 @@
                 <p>Temperature threshold</p>
                 <div class="display-value">{{ threshold }}</div>
                 <form action="/set_threshold/1" method="POST" id="threshold-form" class="form">
-                    <input type="number" name="threshold" id="threshold">
+                    <input type="number" name="threshold" id="threshold" min="-20" max="20">
                     <button class="button" type="submit">Set</button>
                 </form>
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -75,7 +75,7 @@
                 <p>Temperature threshold</p>
                 <div class="display-value">{{ threshold }}</div>
                 <form action="/set_threshold/2" method="POST" id="threshold-form" class="form">
-                    <input type="number" name="threshold" id="threshold">
+                    <input type="number" name="threshold" id="threshold" min="-20" max="20">
                     <button class="button" type="submit">Set</button>
                 </form>
                 {% with messages = get_flashed_messages(with_categories=true) %}
