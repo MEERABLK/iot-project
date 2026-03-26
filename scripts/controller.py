@@ -24,8 +24,12 @@ class Controller:
 
         self.last_email_time = time.time()
         self.fridge1_alert_sent = False
-        self.threshold = 8
 
+       # self.threshold = 8
+        self.thresholds = {
+            "fridge1": 8,  # default values
+            "fridge2": 8
+        }
         self.toggle_callback = toggle_callback  # 👈 store function
 
 
@@ -207,4 +211,10 @@ class Controller:
             print("-----------------------------\n")
 
             time.sleep(5)
-    
+            # Get threshold for a specific fridge
+    def get_threshold(self, fridge_name):
+        return self.thresholds.get(fridge_name, 8)
+
+# Update threshold for a specific fridge
+    def set_threshold(self, fridge_name, value):
+        self.thresholds[fridge_name] = value
