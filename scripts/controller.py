@@ -81,7 +81,7 @@ class Controller:
                         subject="Fridge Alert 🚨",
                         body=f"The following temperatures are too high:\n\n{message}\nReply YES to turn on the fan.",
                         sender=self.email_address,
-                        recipients=["jonathan.markovic@outlook.com"],
+                        recipients=["lowkeymischievous@gmail.com"],
                         password=self.email_password
                     )
                     self.fridge1_alert_sent = True
