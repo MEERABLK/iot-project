@@ -42,7 +42,8 @@ def set_threshold(fridge_name, threshold_value):
         value = float(threshold_value)
 
         mydb = mysql.connector.connect(
-            host=db_host, user=db_user, password=db_password, database="store_db"
+           # host=db_host, user=db_user, password=db_password, database="store_db"
+             host=db_host, user=db_user, password=db_password, database="smartstoreiotproject_db"
         )
         mycursor = mydb.cursor()
 

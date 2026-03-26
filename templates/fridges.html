@@ -36,7 +36,7 @@
         <div class="collection collection-shade-2">
             <div class="collection collection-vertical collection-shade-3">
                 <p>Temperature threshold</p>
-                <div class="display-value">{{ threshold }}</div>
+                <div class="display-value">{{ fridge1_threshold }}</div>
                 <form action="/set_threshold/1" method="POST" id="threshold-form" class="form">
                     <input type="number" name="threshold" id="threshold" min="-20" max="20">
                     <button class="button" type="submit">Set</button>
@@ -73,7 +73,7 @@
         <div class="collection collection-shade-2">
             <div class="collection collection-vertical collection-shade-3">
                 <p>Temperature threshold</p>
-                <div class="display-value">{{ threshold }}</div>
+                <div class="display-value">{{ fridge2_threshold }}</div>
                 <form action="/set_threshold/2" method="POST" id="threshold-form" class="form">
                     <input type="number" name="threshold" id="threshold" min="-20" max="20">
                     <button class="button" type="submit">Set</button>
