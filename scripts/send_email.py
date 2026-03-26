@@ -13,6 +13,7 @@ import smtplib
 from email.mime.text import MIMEText
 import imaplib
 import email
+import email.utils
 from email.header import decode_header
 import time
 
@@ -26,6 +27,7 @@ import scripts.gpio_controller as gpio_controller
 fridge_name = "fridge1"
 
 threshold = get_threshold(fridge_name)
+
 
 if threshold is None:
     print("No threshold found, using default 8°C")
@@ -52,7 +54,7 @@ def send_email(subject, body, sender, recipients, password):
 # =========================
 # 📩 CHECK REPLY FUNCTION
 # =========================
-def check_reply_to_test_subject(username, password):
+def check_reply_to_test_subject(username, password, since_time):
     mail = imaplib.IMAP4_SSL('imap.gmail.com')
     mail.login(username, password)
     mail.select('inbox')
@@ -60,39 +62,62 @@ def check_reply_to_test_subject(username, password):
     result, data = mail.search(None, 'ALL')
     email_ids = data[0].split()
 
-    # check latest 10 emails
-    for e_id in reversed(email_ids[-10:]):
+    for e_id in reversed(email_ids[-20:]):  # last 20 emails only
         result, msg_data = mail.fetch(e_id, '(RFC822)')
         raw_email = msg_data[0][1]
         msg = email.message_from_bytes(raw_email)
 
-        subject = msg["Subject"]
+        # ✅ CHECK EMAIL TIME
+        date_tuple = email.utils.parsedate_tz(msg['Date'])
+        if date_tuple:
+            email_timestamp = email.utils.mktime_tz(date_tuple)
 
-        # decode subject
+            # ❌ Skip old emails
+            if email_timestamp < since_time:
+                continue
+
+        # SUBJECT
+        subject = msg["Subject"]
         if subject:
             subject, encoding = decode_header(subject)[0]
             if isinstance(subject, bytes):
                 subject = subject.decode(encoding if encoding else "utf-8")
 
-        # ONLY CHECK REPLIES
-        if subject and "Re: Test Subject" in subject:
+        print("DEBUG SUBJECT:", subject)
 
+        if subject and "FRIDGE ALERT" in subject.upper():
+
+            # BODY
             body = ""
 
             if msg.is_multipart():
-                for part in msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        body = part.get_payload(decode=True).decode(errors="ignore")
-                        break
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        content_type = part.get_content_type()
+                        content_disposition = str(part.get("Content-Disposition"))
+
+                        # ✅ skip attachments
+                        if "attachment" in content_disposition:
+                            continue
+
+                        # ✅ prefer plain text
+                        if content_type == "text/plain":
+                            body = part.get_payload(decode=True).decode(errors="ignore")
+                            if body.strip():
+                                break
+
+                        # ✅ fallback to HTML if plain text empty
+                        elif content_type == "text/html" and not body:
+                            html_body = part.get_payload(decode=True).decode(errors="ignore")
+                            body = html_body  # temporary fallback
             else:
                 body = msg.get_payload(decode=True).decode(errors="ignore")
 
-            print("📩 Found reply!")
-            print("Body:", body)
+            print("DEBUG BODY:", repr(body))
 
-            first_line = body.strip().splitlines()[0]
+            clean_body = body.strip().upper()
 
-            if first_line.upper() == "YES":
+            if clean_body.startswith("YES"):
                 print("✅ YES DETECTED!")
                 mail.logout()
                 return True

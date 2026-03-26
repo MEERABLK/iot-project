@@ -1,5 +1,4 @@
 # controller.py
-
 from scripts.sensor_data import data, start as start_mqtt
 from scripts import gpio_controller
 from scripts import send_email
@@ -18,10 +17,13 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 class Controller:
     def __init__(self):
-        self.data = data  # shared sensor data
-        self.email_sent = False 
+        self.data = data
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
+        self.last_email_time = time.time()
+
+        self.fridge1_alert_sent = False
+
     def start(self):
         # Start MQTT listener
         start_mqtt()
@@ -29,19 +31,65 @@ class Controller:
         # Start background logic (alerts, GPIO, etc.)
         threading.Thread(target=self._background_tasks, daemon=True).start()
 
+    # def _background_tasks(self):
+    #     while True:
+    #         # Example: control GPIO based on temperature
+    #         if self.data.fridge1Temperature is not None:
+    #             if self.data.fridge1Temperature > 8:
+    #                 # send alert
+    #                 send_email.send_email(
+    #                     subject="Fridge Alert 🚨",
+    #                     body=f"Temp too high: {self.data.fridge1Temperature}. Would you like to turn on the fan?",
+    #                     sender=EMAIL_ADDRESS,
+    #                     recipients=["jonathan.markovic@outlook.com"],
+    #                     password=EMAIL_PASSWORD
+    #                 )
+
+    #         time.sleep(5)
     def _background_tasks(self):
+        threshold = 19
+
         while True:
-            # Example: control GPIO based on temperature
-            if self.data.fridge1Temperature is not None:
-                if self.data.fridge1Temperature > 8:
-                    # send alert
+            f1 = self.data.fridge1Temperature
+            f2 = self.data.fridge2Temperature
+
+            alert_triggered = False
+            message = ""
+
+            # Check both fridges
+            if f1 is not None and f1 > threshold:
+                alert_triggered = True
+                message += f"Fridge 1: {f1}°C\n"
+
+            if f2 is not None and f2 > threshold:
+                alert_triggered = True
+                message += f"Fridge 2: {f2}°C\n"
+
+            # ===== SEND EMAIL ONCE =====
+            if alert_triggered:
+                if not self.fridge1_alert_sent:  # reuse one flag
                     send_email.send_email(
                         subject="Fridge Alert 🚨",
-                        body=f"Temp too high: {self.data.fridge1Temperature}. Would you like to turn on the fan?",
-                        sender=EMAIL_ADDRESS,
-                        recipients=["lowkeymischievous@gmail.com"],
-                        password=EMAIL_PASSWORD
+                        body=f"The following temperatures are too high:\n\n{message}\nReply YES to turn on the fan.",
+                        sender=self.email_address,
+                        recipients=["jonathan.markovic@outlook.com"],
+                        password=self.email_password
                     )
+                    self.fridge1_alert_sent = True
+                    self.last_email_time = time.time()
+
+                # ===== CHECK FOR REPLY =====
+                elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
+                    print("🔥 Turning ON fan")
+                    gpio_controller.spinMotor()
+                    time.sleep(5)
+                    gpio_controller.stopMotor()
+
+                    self.fridge1_alert_sent = False  # reset after action
+
+            else:
+                # Reset when everything is back to normal
+                self.fridge1_alert_sent = False
 
             time.sleep(5)
 
@@ -75,6 +123,7 @@ class Controller:
 
             # Wait for user input
             user_input = input("Reply YES to turn on fan: ").strip().upper()
+            print(user_input)
             if user_input == "YES":
                 print("Turning on fan...")
     
