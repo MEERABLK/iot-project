@@ -2,7 +2,7 @@
 from scripts.sensor_data import data, start as start_mqtt
 from scripts import gpio_controller
 from scripts import send_email
-import index
+# import index
 import threading
 import time
 from dotenv import load_dotenv
@@ -17,16 +17,16 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 
 class Controller:
-    def __init__(self):
+    def __init__(self, toggle_callback):
         self.data = data
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
 
         self.last_email_time = time.time()
-
         self.fridge1_alert_sent = False
-
         self.threshold = 8
+
+        self.toggle_callback = toggle_callback  # 👈 store function
 
 
     def start(self):
@@ -164,8 +164,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 1")
-                        index.toggle_on(1)
-
+                        self.toggle_callback(1)
                         fridge1_alert_sent = False  # reset after action
 
                 else:
@@ -195,7 +194,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 2")
-                        index.toggle_on(2)
+                        self.toggle_callback(2)
 
                         fridge2_alert_sent = False  # reset after action
 
