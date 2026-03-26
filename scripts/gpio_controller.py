@@ -36,6 +36,9 @@ def failure():
     print("Buzzer Off")
 
 def spinMotor():
+    print("Turning on fan")
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
     GPIO.setup(Motor1,GPIO.OUT)
     GPIO.setup(Motor2,GPIO.OUT)
     GPIO.setup(Motor3,GPIO.OUT)
@@ -57,4 +60,6 @@ def cleanup():
 #success()
 #time.sleep(2)
 #failure()
-#GPIO.cleanup()
+# spinMotor()
+# stopMotor()
+GPIO.cleanup()

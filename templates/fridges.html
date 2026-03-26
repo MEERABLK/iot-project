@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fridges</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+<body>
+    {% include 'components/back_button.html' %}
+    <div class="container">
+        <h2>Fridges</h2>
+        <h3>Send email</h3>
+        <div class="collection collection-vertical collection-shade-1">
+            <p>Enter the email to send to...</p>
+            <form action="/send_email" method="POST" id="email-form">
+                <input type="email" name="email" id="email" required="true" placeholder="iot@example.com">
+                <button class="button" type="submit">
+                    Send
+                </button>
+            </form>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <h3>Fridge 1</h3>
+        <div class="collection collection-shade-2">
+            <div class="collection collection-shade-3">Temp: <span id="f1_temp">--</span></div>
+            <div class="collection collection-shade-3">Humidity: <span id="f1_humidity">--</span></div>
+            <div class="collection collection-shade-1">
+                Fan
+                <div class="toggle-body" id="fridge1-toggle">
+                    <div class="toggle-switch"></div>
+                </div>
+            </div>
+        </div>
+
+        <h3>Fridge 2</h3>
+        <div class="collection collection-shade-2">
+            <div class="collection collection-shade-3">Temp: <span id="f2_temp">--</span></div>
+            <div class="collection collection-shade-3">Humidity: <span id="f2_humidity">--</span></div>
+            <div class="collection collection-shade-1">
+                Fan
+                <div class="toggle-body" id="fridge2-toggle">
+                    <div class="toggle-switch"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", init);
+
+function init() {
+    const fridge1Toggle = document.getElementById("fridge1-toggle");
+    const fridge2Toggle = document.getElementById("fridge2-toggle");
+
+    fridge1Toggle.addEventListener('click', () => {
+        fridge1Toggle.classList.toggle('toggle-on');
+
+        isOn = fridge1Toggle.classList.contains('toggle-on');
+
+         fetch('/api/update-fan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fridge1: isOn })
+         });
+    });
+
+    fridge2Toggle.addEventListener('click', () => {
+        fridge2Toggle.classList.toggle('toggle-on');
+
+        isOn = fridge2Toggle.classList.contains('toggle-on');
+
+         fetch('/api/update-fan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fridge2: isOn })
+         });
+    });
+}
+
+async function fetchTemps() {
+    console.log("Fetching temps");
+    try {
+        const response = await fetch('/api/temps');
+        const data = await response.json();
+
+        document.getElementById('f1_temp').textContent = data.fridge1_temp ?? '--';
+        document.getElementById('f1_humidity').textContent = data.fridge1_humidity ?? '--';
+
+        document.getElementById('f2_temp').textContent = data.fridge2_temp ?? '--';
+        document.getElementById('f2_humidity').textContent = data.fridge2_humidity ?? '--';
+
+    } catch (error) {
+        console.error("Error fetching temps:", error);
+    }
+}
+
+// refresh every 2 seconds
+setInterval(fetchTemps, 2000);
+
+// run immediately on page load
+fetchTemps();
+</script>
+</html>
