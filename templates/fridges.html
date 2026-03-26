@@ -108,11 +108,15 @@
     </div>
 </body>
 
-<script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 
+<script>
 document.addEventListener("DOMContentLoaded", init);
 
 function init() {
+
+    const socket = io();
+
     const fridge1Toggle = document.getElementById("fridge1-toggle");
     const fridge2Toggle = document.getElementById("fridge2-toggle");
 
@@ -141,6 +145,39 @@ function init() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ fridge2: isOn })
+         });
+    });
+
+    socket.on('toggle1_updated', function(data) {
+        // Update the UI based on what Python tells us
+        if (data.toggle_on) {
+            fridge1Toggle.classList.add('toggle-on');
+        } else {
+            fridge1Toggle.classList.remove('toggle-on');
+        }
+
+        fetch('/api/update-fan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fridge1: data.toggle_on })
+         });
+    });
+
+    socket.on('toggle2_updated', function(data) {
+        if (data.toggle_on) {
+            fridge2Toggle.classList.add('toggle-on');
+        } else {
+            fridge2Toggle.classList.remove('toggle-on');
+        }
+
+        fetch('/api/update-fan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fridge2: data.toggle_on })
          });
     });
 }
