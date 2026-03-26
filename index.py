@@ -34,18 +34,15 @@ def index():
 
 @app.route('/fridges')
 def fridges():
-    # return render_template(
-    #     'fridges.html'
-    # )
     return render_template(
         'fridges.html',
-        threshold=controller.threshold,
         fridge1_temp=controller.get_fridge1_temp(),
         fridge1_humidity=controller.get_fridge1_humidity(),
         fridge2_temp=controller.get_fridge2_temp(),
-        fridge2_humidity=controller.get_fridge2_humidity()
+        fridge2_humidity=controller.get_fridge2_humidity(),
+        fridge1_threshold=controller.thresholds["fridge1"],  # fridge 1 threshold
+        fridge2_threshold=controller.thresholds["fridge2"],  # fridge 2 threshold
     )
-
 @app.route('/send_email', methods=['POST'])
 def handle_send_email():
     email = request.form.get('email', '').strip()
@@ -58,12 +55,18 @@ def handle_send_email():
 
     return redirect(url_for('fridges'))
 
+
+
 @app.route('/set_threshold/<int:fridge_id>', methods=['POST'])
 def handle_set_threshold(fridge_id):
+    fridge_name = f"fridge{fridge_id}"
     threshold = request.form.get('threshold', 'Bad value')
 
     try:
-        data.set_threshold(f"fridge{fridge_id}", float(threshold))
+        value = float(threshold)
+        data.set_threshold(fridge_name, value)  # update DB
+        controller.set_threshold(fridge_name, value)  # update controller memory
+
         flash("Threshold updated", f"temp{fridge_id} success")
     except (TypeError, ValueError):
         flash("Invalid value", f"temp{fridge_id} error") 
