@@ -2,6 +2,7 @@
 from scripts.sensor_data import data, start as start_mqtt
 from scripts import gpio_controller
 from scripts import send_email
+# import index
 import threading
 import time
 from dotenv import load_dotenv
@@ -16,13 +17,21 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 
 class Controller:
-    def __init__(self):
+    def __init__(self, toggle_on, toggle_off):
         self.data = data
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
-        self.last_email_time = time.time()
 
+        self.last_email_time = time.time()
         self.fridge1_alert_sent = False
+
+        self.toggle_on = toggle_on  # 👈 store function
+        self.toggle_off = toggle_off
+       # self.threshold = 8
+        self.thresholds = {
+            "fridge1": 8,  # default values
+            "fridge2": 8
+        }
 
     def start(self):
         # Start MQTT listener
@@ -82,8 +91,13 @@ class Controller:
                 elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
                     print("🔥 Turning ON fan")
                     gpio_controller.spinMotor()
+                    self.toggle_on(1)
+                    self.toggle_on(2)
                     time.sleep(5)
-                    gpio_controller.stopMotor()
+                    # gpio_controller.stopMotor()
+                    # self.toggle_off(1)
+                    # self.toggle_off(2)
+                    
 
                     self.fridge1_alert_sent = False  # reset after action
 
@@ -128,7 +142,7 @@ class Controller:
                 print("Turning on fan...")
     
     
-    def monitor_temperatures(self, recipient, threshold=8):
+    def monitor_temperatures(self, recipient):
         fridge1_alert_sent = False
         fridge2_alert_sent = False
 
@@ -142,7 +156,7 @@ class Controller:
             if f1 is not None:
                 print(f"Fridge 1: {f1}°C")
 
-                if f1 > threshold:
+                if f1 > self.threshold:
                     print("⚠️ Fridge 1 temperature too high!")
 
                     # Send email once
@@ -159,10 +173,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 1")
-                        gpio_controller.spinMotor()
-                        time.sleep(5)
-                        gpio_controller.stopMotor()
-
+                        self.toggle_on(1)
                         fridge1_alert_sent = False  # reset after action
 
                 else:
@@ -175,7 +186,7 @@ class Controller:
             if f2 is not None:
                 print(f"Fridge 2: {f2}°C")
 
-                if f2 > threshold:
+                if f2 > self.threshold:
                     print("⚠️ Fridge 2 temperature too high!")
 
                     # Send email once
@@ -192,9 +203,7 @@ class Controller:
                     # ✅ Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 2")
-                        gpio_controller.spinMotor()
-                        time.sleep(5)
-                        gpio_controller.stopMotor()
+                        self.toggle_on(2)
 
                         fridge2_alert_sent = False  # reset after action
 
@@ -207,3 +216,10 @@ class Controller:
             print("-----------------------------\n")
 
             time.sleep(5)
+            # Get threshold for a specific fridge
+    def get_threshold(self, fridge_name):
+        return self.thresholds.get(fridge_name, 8)
+
+# Update threshold for a specific fridge
+    def set_threshold(self, fridge_name, value):
+        self.thresholds[fridge_name] = value

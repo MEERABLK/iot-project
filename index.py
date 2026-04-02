@@ -2,14 +2,26 @@
 import os
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_socketio import SocketIO
 
 from scripts.controller import Controller
 import scripts.gpio_controller as gpio
+import db.database as data
 import time
 
-controller = Controller()
 app = Flask(__name__)
 app.secret_key = "iot_vanier_1"
+socketio = SocketIO(app)
+
+def toggle_on(id):
+    print("Toggling on")
+    socketio.emit(f'toggle{id}_updated', {'toggle_on': True})
+
+def toggle_off(id):
+    print("Toggling off")
+    socketio.emit(f'toggle{id}_updated', {'toggle_on': False})
+
+controller = Controller(toggle_on, toggle_off)
 
 load_dotenv("credentials.env")
 
@@ -22,26 +34,42 @@ def index():
 
 @app.route('/fridges')
 def fridges():
-    # return render_template(
-    #     'fridges.html'
-    # )
     return render_template(
         'fridges.html',
         fridge1_temp=controller.get_fridge1_temp(),
         fridge1_humidity=controller.get_fridge1_humidity(),
         fridge2_temp=controller.get_fridge2_temp(),
-        fridge2_humidity=controller.get_fridge2_humidity()
+        fridge2_humidity=controller.get_fridge2_humidity(),
+        fridge1_threshold=controller.thresholds["fridge1"],  # fridge 1 threshold
+        fridge2_threshold=controller.thresholds["fridge2"],  # fridge 2 threshold
     )
-
 @app.route('/send_email', methods=['POST'])
 def handle_send_email():
     email = request.form.get('email', '').strip()
 
     if email:
         controller.monitor_temperatures(email)
-        flash("Email sent!", "success")
+        flash("Email sent!", "mail success")
     else:
-        flash("Invalid email", "error")       
+        flash("Invalid email", "mail error")       
+
+    return redirect(url_for('fridges'))
+
+
+
+@app.route('/set_threshold/<int:fridge_id>', methods=['POST'])
+def handle_set_threshold(fridge_id):
+    fridge_name = f"fridge{fridge_id}"
+    threshold = request.form.get('threshold', 'Bad value')
+
+    try:
+        value = float(threshold)
+        data.set_threshold(fridge_name, value)  # update DB
+        controller.set_threshold(fridge_name, value)  # update controller memory
+
+        flash("Threshold updated", f"temp{fridge_id} success")
+    except (TypeError, ValueError):
+        flash("Invalid value", f"temp{fridge_id} error") 
 
     return redirect(url_for('fridges'))
 
@@ -56,7 +84,6 @@ def handle_fan():
             gpio.spinMotor()
         else :
             gpio.stopMotor()
-    
 
     return jsonify({"status": "success"})
 
@@ -77,21 +104,4 @@ if __name__ == '__main__':
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         threading.Thread(target=controller.start, daemon=True).start()
     
-    app.run(debug=True)
-
-
-
-# controller = Controller()
-# #controller = Controller(email_address=EMAIL_ADDRESS, email_password=EMAIL_PASSWORD)
-
-# controller.start()
-# controller.data.fridge1Temperature = 10
-# controller.monitor_temperatures()
-# while True:
-#     print("Fridge1 Temp:", controller.get_fridge1_temp())
-#     print("Fridge1 Hum:", controller.get_fridge1_humidity())
-#     print("Fridge2 Temp:", controller.get_fridge2_temp())
-#     print("Fridge2 Hum:", controller.get_fridge2_humidity())
-#     print("------")
-
-#     time.sleep(2)
+    socketio.run(app, debug=True)

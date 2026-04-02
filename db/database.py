@@ -35,6 +35,36 @@ def get_threshold(fridge_name):
     except mysql.connector.Error as err:
         print("Database Error:", err)
         return None
+    
+def set_threshold(fridge_name, threshold_value):
+    mydb = None
+    print(fridge_name, threshold_value)
+    try:
+        value = float(threshold_value)
+
+        mydb = mysql.connector.connect(
+           # host=db_host, user=db_user, password=db_password, database="store_db"
+             host=db_host, user=db_user, password=db_password, database="smartstoreiotproject_db"
+        )
+        mycursor = mydb.cursor()
+
+        sql = """
+            INSERT INTO thresholds (fridge_name, temperature_threshold) 
+            VALUES (%s, %s) 
+            ON DUPLICATE KEY UPDATE temperature_threshold = %s
+        """
+        mycursor.execute(sql, (fridge_name, value, value)) # passing the value twice, one for insert case, one for update case
+
+        mydb.commit()
+        return True
+
+    except (mysql.connector.Error, ValueError) as err:
+        print(f"Error saving threshold: {err}")
+        return False
+    finally:
+        if mydb and mydb.is_connected():
+            mycursor.close()
+            mydb.close()
         
 def add_customer(first, last, email, phone, address, city, province, postal_code):
     try:
