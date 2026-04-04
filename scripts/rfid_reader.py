@@ -1,5 +1,7 @@
 #No Beep and ontinuous inventory
 
+# Use this if rfid reader is not appearing in the USB devices under /dev/ttyUSB*
+# sudo modprobe usbserial vendor=0x0483 product=0x5750
 import serial
 import time
 
