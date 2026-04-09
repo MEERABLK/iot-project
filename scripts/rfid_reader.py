@@ -1,5 +1,7 @@
 #No Beep and ontinuous inventory
 
+# Use this if rfid reader is not appearing in the USB devices under /dev/ttyUSB*
+# sudo modprobe usbserial vendor=0x0483 product=0x5750
 import serial
 import time
 
@@ -18,6 +20,8 @@ ser.write(bytes.fromhex("0008220000000022"))
 print("Inventory started")
 
 buffer = bytearray()
+buffer = bytearray()
+unique_tags = [] # This will store unique EPCs
 
 while True:
 
@@ -48,9 +52,14 @@ while True:
 
             epc = frame[5:5+epc_len].hex().upper()
 
-            rssi_raw = frame[5+epc_len]
-            rssi = rssi_raw - 256 if rssi_raw > 127 else rssi_raw
-
-            print("EPC:",epc,"RSSI:",rssi)
+            # --- UNIQUE CHECK LOGIC ---
+            if epc not in unique_tags:
+                unique_tags.append(epc)
+                rssi_raw = frame[5+epc_len]
+                rssi = rssi_raw - 256 if rssi_raw > 127 else rssi_raw
+                
+                print(f"New Tag Found! EPC: {epc} | RSSI: {rssi}")
+                print(f"Total Unique Tags: {len(unique_tags)}")
+            # --------------------------
 
             del buffer[:idx+frame_len]
