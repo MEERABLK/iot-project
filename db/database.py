@@ -91,3 +91,80 @@ def add_customer(first, last, email, phone, address, city, province, postal_code
     except mysql.connector.Error as err:
         print("Database Error:", err)
         return False
+
+
+## Phase 2 products epc
+def get_product_by_epc(epc):
+    mydb = mysql.connector.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database="smartstoreiotproject_db"
+    )
+
+    cursor = mydb.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM products WHERE EPC = %s", (epc,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    mydb.close()
+
+    return result
+
+# checkout function
+def create_receipt(customer_id, cart):
+    try:
+        db = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        cursor = db.cursor()
+
+        total = sum(item['price'] * item['qty'] for item in cart.values())
+        points = int(total)  # simple system
+
+        # Insert receipt
+        cursor.execute(
+            "INSERT INTO receipts (customer_id, total, points_earned) VALUES (%s, %s, %s)",
+            (customer_id, total, points)
+        )
+        receipt_id = cursor.lastrowid
+
+        # Insert items
+        for pid, item in cart.items():
+            cursor.execute(
+                "INSERT INTO receipt_items (receipt_id, product_id, quantity, price) VALUES (%s, %s, %s, %s)",
+                (receipt_id, pid, item['qty'], item['price'])
+            )
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+        return receipt_id
+
+    except Exception as e:
+        print("Checkout Error:", e)
+        return None
+
+#inventory update 
+def reduce_stock(product_id, qty):
+    db = mysql.connector.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database="smartstoreiotproject_db"
+    )
+    cursor = db.cursor()
+
+    cursor.execute(
+        "UPDATE inventory SET quantity = quantity - %s WHERE product_id = %s",
+        (qty, product_id)
+    )
+
+    db.commit()
+    cursor.close()
+    db.close()

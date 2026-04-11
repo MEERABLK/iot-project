@@ -63,6 +63,7 @@
 #             # --------------------------
 
 #             del buffer[:idx+frame_len]
+
 import serial
 import time
 
@@ -100,9 +101,13 @@ def get_rfid_tags():
                     if epc not in unique_tags:
                         unique_tags.append(epc)
                         # Instead of just printing, we 'yield' the whole list
-                        yield unique_tags 
-
+                       # yield unique_tags 
+                        yield epc
                     del buffer[:idx+frame_len]
     finally:
         ser.close()
-        
+
+#test
+if __name__ == "__main__":
+    for tags in get_rfid_tags():
+        print("Tags:", tags)        

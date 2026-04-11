@@ -7,7 +7,8 @@ import threading
 import time
 from dotenv import load_dotenv
 import os
-from rfid_reader import get_rfid_tags 
+from db import database
+from scripts.rfid_reader import get_rfid_tags
 
 load_dotenv("credentials.env")
 
@@ -36,6 +37,8 @@ class Controller:
 
         self.rfid_tags = []  # 👈 This will hold the unique tags
         self.lock = threading.Lock() # Prevents data corruption during simultaneous read/write
+        
+        self.cart = {}
 
     def start(self):
         # Start MQTT listener
@@ -46,19 +49,58 @@ class Controller:
         # Start RFID Logic 👈 NEW THREAD
         threading.Thread(target=self._rfid_background_task, daemon=True).start()
 
+    #===RFID==
     def _rfid_background_task(self):
-    # Listens to the RFID generator and updates everything
-        for updated_list in get_rfid_tags():
-            new_tag = updated_list[-1] # The most recently scanned tag
+        for tag_epc in get_rfid_tags():
             
-            with self.lock:
-                self.rfid_tags = updated_list
+            product = database.get_product_by_epc(tag_epc)
+            
+            if product:
+                self._handle_tag(tag_epc)
+    # Listens to the RFID generator and updates everything
+       # for updated_list in get_rfid_tags():
+           # new_tag = updated_list[-1] # The most recently scanned tag
+         
+                with self.lock:
+                    if tag_epc not in self.rfid_tags:
+                        self.rfid_tags.append(tag_epc)
             
             # 🚀 UPDATE DATABASE HERE
-            try:
-                self._save_tag_to_db(new_tag)
-            except Exception as e:
-                print(f"Database Error: {e}")
+            
+                self._save_tag_to_db(tag_epc)
+            else: 
+                print(f"❌ Unknown tag ignored: {tag_epc}")
+
+    #===core logic===
+    def _handle_tag(self, tag_epc):
+        product = database.get_product_by_epc(tag_epc)
+
+        if not product:
+            print(f"❌ Unknown tag: {tag_epc}")
+            return
+
+        pid = product['product_id']
+
+    # update cart
+        if pid in self.cart:
+           self.cart[pid]['qty'] += 1
+        else:
+            self.cart[pid] = {
+            "name": product['name'],
+            "price": float(product['price']),
+            "qty": 1
+            }
+
+    # PRINT CART LIVE
+        print("\n ITEM ADDED")
+        print(f"{product['name']} - ${product['price']}")
+
+        total = 0
+        for item in self.cart.values():
+            total += item['price'] * item['qty']
+
+        print(f"💰 TOTAL: {total}\n")
+
 
     def _save_tag_to_db(self, tag_epc):
     # Helper to send data to your DB script.
@@ -84,6 +126,10 @@ class Controller:
     #                 )
 
     #         time.sleep(5)
+
+    def get_cart(self):
+        return self.cart
+    
     def _background_tasks(self):
         threshold = 19
 
