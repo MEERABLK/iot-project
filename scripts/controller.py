@@ -7,6 +7,7 @@ import threading
 import time
 from dotenv import load_dotenv
 import os
+from rfid_reader import get_rfid_tags 
 
 load_dotenv("credentials.env")
 
@@ -33,13 +34,41 @@ class Controller:
             "fridge2": 8
         }
 
+        self.rfid_tags = []  # 👈 This will hold the unique tags
+        self.lock = threading.Lock() # Prevents data corruption during simultaneous read/write
+
     def start(self):
         # Start MQTT listener
         start_mqtt()
 
         # Start background logic (alerts, GPIO, etc.)
         threading.Thread(target=self._background_tasks, daemon=True).start()
+        # Start RFID Logic 👈 NEW THREAD
+        threading.Thread(target=self._rfid_background_task, daemon=True).start()
 
+    def _rfid_background_task(self):
+    # Listens to the RFID generator and updates everything
+        for updated_list in get_rfid_tags():
+            new_tag = updated_list[-1] # The most recently scanned tag
+            
+            with self.lock:
+                self.rfid_tags = updated_list
+            
+            # 🚀 UPDATE DATABASE HERE
+            try:
+                self._save_tag_to_db(new_tag)
+            except Exception as e:
+                print(f"Database Error: {e}")
+
+    def _save_tag_to_db(self, tag_epc):
+    # Helper to send data to your DB script.
+    # Example: database_script.insert_tag(tag_epc, time.time())
+        print(f"💾 Tag {tag_epc} saved to database.")
+
+    # 👇 This is what Frontend / GUI should call
+    def get_latest_tags(self):
+        with self.lock:
+            return list(self.rfid_tags) # Return a copy to be safe        
     # def _background_tasks(self):
     #     while True:
     #         # Example: control GPIO based on temperature
