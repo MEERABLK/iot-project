@@ -107,6 +107,7 @@ class Controller:
                     "price": price,
                     "qty": 1,
                     "category": product.get('category', 'General'),
+                    "source": "rfid",  # 👈 New flag
                     "producer": product.get('producer', 'Unknown')
                 }
 
@@ -155,7 +156,8 @@ class Controller:
                         "price": price,
                         "qty": 1,
                         "category": product.get('category', 'General'),
-                        "producer": product.get('producer', 'Unknown')
+                        "producer": product.get('producer', 'Unknown'),
+                        "source": "barcode",  # 👈 New flag
                     }
 
             print(f"🏷️ Barcode Scanned: {name} (${price})")
