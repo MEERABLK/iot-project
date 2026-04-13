@@ -55,8 +55,6 @@ def handle_send_email():
 
     return redirect(url_for('fridges'))
 
-
-
 @app.route('/set_threshold/<int:fridge_id>', methods=['POST'])
 def handle_set_threshold(fridge_id):
     fridge_name = f"fridge{fridge_id}"
@@ -95,6 +93,11 @@ def get_temps():
         "fridge2_temp": controller.get_fridge2_temp(),
         "fridge2_humidity": controller.get_fridge2_humidity()
     })
+
+@app.route('/checkout')
+def checkout():
+    return render_template('checkout.html')
+
 @app.route('/admin')
 def admin():
     return render_template('admin.html')

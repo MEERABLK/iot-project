@@ -20,26 +20,29 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 class Controller:
     def __init__(self, toggle_on, toggle_off):
-        self.data = data
+        # 📧 Email & Alert Configuration
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
-
         self.last_email_time = time.time()
         self.fridge1_alert_sent = False
 
-        self.toggle_on = toggle_on  # 👈 store function
-        self.toggle_off = toggle_off
-       # self.threshold = 8
+        # 🌡️ Sensor & Threshold Data
+        self.data = data
         self.thresholds = {
-            "fridge1": 8,  # default values
+            "fridge1": 8,
             "fridge2": 8
         }
 
-        self.rfid_tags = []  # 👈 This will hold the unique tags
-        self.lock = threading.Lock() # Prevents data corruption during simultaneous read/write
-        
-        self.carts = {}
-        self.cart = {}
+        # ⚙️ Hardware Controls
+        self.toggle_on = toggle_on
+        self.toggle_off = toggle_off
+        self.lock = threading.Lock()
+
+        # 🛰️ RFID & Cart Logic
+        self.rfid_tags = []         # Current tags physically on the scanner
+        self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
+        self.cart = {}              # Stores product info and quantities
+        self.carts = {}             # For historical or multiple cart tracking
 
     def start(self):
         # Start MQTT listener
@@ -52,26 +55,25 @@ class Controller:
 
     #===RFID==
     def _rfid_background_task(self):
-        for tag_epc in get_rfid_tags():
-            
-            product = database.get_product_by_epc(tag_epc)
-            
-            if product:
-                self._handle_tag(tag_epc)
-    # Listens to the RFID generator and updates everything
-       # for updated_list in get_rfid_tags():
-           # new_tag = updated_list[-1] # The most recently scanned tag
-         
-                with self.lock:
-                    if tag_epc not in self.rfid_tags:
-                        self.rfid_tags.append(tag_epc)
-            
-            # 🚀 UPDATE DATABASE HERE
-            
-                self._save_tag_to_db(tag_epc)
-            else: 
-                print(f"❌ Unknown tag ignored: {tag_epc}")
+        """Syncs the controller state with the physical scanner state."""
+        for current_tags in get_rfid_tags():
+            # Update the source of truth for the UI
+            with self.lock:
+                self.rfid_tags = current_tags
 
+            # Handle cart logic for NEWLY added tags
+            for tag_epc in current_tags:
+                # We only want to 'add to cart' if it's the first time we see it 
+                # in this specific 'session' or if you want it to trigger immediately
+                if tag_epc not in self.cart_check_list: # You'd need a separate set to track 'processed' items
+                    self._handle_tag(tag_epc)
+                    self.cart_check_list.add(tag_epc)
+
+            # Cleanup: If a tag is physically removed, allow it to be 'scanned' again later
+            for tag_epc in list(self.cart_check_list):
+                if tag_epc not in current_tags:
+                    self.cart_check_list.remove(tag_epc)
+                    print(f"🗑️ Tag {tag_epc} removed from scanner")
     #===core logic===
     def _handle_tag(self, tag_epc):
         product = database.get_product_by_epc(tag_epc)

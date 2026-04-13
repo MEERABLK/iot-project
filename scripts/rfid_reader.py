@@ -1,113 +1,59 @@
-# #No Beep and ontinuous inventory
-
 # # Use this if rfid reader is not appearing in the USB devices under /dev/ttyUSB*
 # # sudo modprobe usbserial vendor=0x0483 product=0x5750
-# import serial
-# import time
-
-# ser = serial.Serial("/dev/ttyUSB0",115200,timeout=0.1)
-
-# # Stop inventory command (standard for many ST-based readers)
-# ser.write(bytes.fromhex("0008220100000023")) 
-# time.sleep(0.1)
-
-# # disable beep
-# ser.write(bytes.fromhex("0007FF0000000000"))
-
-# # start continuous inventory
-# ser.write(bytes.fromhex("0008220000000022"))
-
-# print("Inventory started")
-
-# buffer = bytearray()
-# buffer = bytearray()
-# unique_tags = [] # This will store unique EPCs
-
-# while True:
-
-#     data = ser.read(ser.in_waiting or 1)
-#     # print(f"RAW data received: {data.hex()}")
-#     if data:
-#         buffer.extend(data)
-
-#         while True:
-
-#             # idx = buffer.find(b'\xCF')
-#             idx = buffer.find(b'\xFC')
-
-#             if idx == -1:
-#                 break
-
-#             if len(buffer) < idx + 5:
-#                 break
-
-#             epc_len = buffer[idx+4]
-
-#             frame_len = 2 + 2 + 1 + epc_len + 2
-
-#             if len(buffer) < idx + frame_len:
-#                 break
-
-#             frame = buffer[idx:idx+frame_len]
-
-#             epc = frame[5:5+epc_len].hex().upper()
-
-#             # --- UNIQUE CHECK LOGIC ---
-#             if epc not in unique_tags:
-#                 unique_tags.append(epc)
-#                 rssi_raw = frame[5+epc_len]
-#                 rssi = rssi_raw - 256 if rssi_raw > 127 else rssi_raw
-                
-#                 print(f"New Tag Found! EPC: {epc} | RSSI: {rssi}")
-#                 print(f"Total Unique Tags: {len(unique_tags)}")
-#             # --------------------------
-
-#             del buffer[:idx+frame_len]
 
 import serial
 import time
 
-def get_rfid_tags():
+def get_rfid_tags(timeout=2.0):
     ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.1)
     
-    # Initialization commands
+    # Init commands
     ser.write(bytes.fromhex("0008220100000023")) # Stop
     time.sleep(0.1)
     ser.write(bytes.fromhex("0007FF0000000000")) # No beep
     ser.write(bytes.fromhex("0008220000000022")) # Start continuous
     
     buffer = bytearray()
-    unique_tags = []
+    active_tags = {} # Format: {epc: last_seen_timestamp}
 
     try:
         while True:
             data = ser.read(ser.in_waiting or 1)
+            current_time = time.time()
+
             if data:
                 buffer.extend(data)
                 while True:
                     idx = buffer.find(b'\xFC')
-                    if idx == -1 or len(buffer) < idx + 5:
-                        break
+                    if idx == -1 or len(buffer) < idx + 5: break
 
                     epc_len = buffer[idx+4]
-                    frame_len = 2 + 2 + 1 + epc_len + 2
-
-                    if len(buffer) < idx + frame_len:
-                        break
+                    frame_len = 5 + epc_len + 2
+                    if len(buffer) < idx + frame_len: break
 
                     frame = buffer[idx:idx+frame_len]
                     epc = frame[5:5+epc_len].hex().upper()
-
-                    if epc not in unique_tags:
-                        unique_tags.append(epc)
-                        # Instead of just printing, we 'yield' the whole list
-                       # yield unique_tags 
-                        yield epc
+                    
+                    # Update or Add the tag with current timestamp
+                    active_tags[epc] = current_time
                     del buffer[:idx+frame_len]
+
+            # --- REMOVAL LOGIC ---
+            # Create a list of tags that haven't been seen within the timeout
+            removed_tags = [epc for epc, last_seen in active_tags.items() 
+                            if current_time - last_seen > timeout]
+            
+            for epc in removed_tags:
+                del active_tags[epc]
+
+            # Yield the current list of tags physically present
+            yield list(active_tags.keys())
+            
     finally:
         ser.close()
 
-#test
 if __name__ == "__main__":
+    print("📡 Monitoring active tags... (Remove tag to see it disappear)")
     for tags in get_rfid_tags():
-        print("Tags:", tags)        
+        print(f"Active Tags: {tags}", end="\r")
+        time.sleep(0.1)
