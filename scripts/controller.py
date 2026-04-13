@@ -52,6 +52,8 @@ class Controller:
         threading.Thread(target=self._background_tasks, daemon=True).start()
         # Start RFID Logic 👈 NEW THREAD
         threading.Thread(target=self._rfid_background_task, daemon=True).start()
+        # start barcode listener
+        threading.Thread(target=self.barcode_listener, daemon=True).start()
 
     #===RFID==
     def _rfid_background_task(self):
@@ -125,6 +127,51 @@ class Controller:
             total += item['price'] * item['qty']
 
         print(f"💰 TOTAL: {total}\n")
+
+    # === Barcode Logic ===
+    def add_by_barcode(self, upc):
+        """
+        Manually adds an item to the cart using its barcode/UPC.
+        """
+        try:
+            # 1. Fetch product using the UPC function in database.py
+            product = database.get_product_by_upc(upc)
+
+            if not product:
+                print(f"⚠️ Unknown Barcode: {upc}")
+                return {"error": "unknown_barcode", "upc": upc}
+
+            pid = product.get('product_id')
+            name = product.get('name', 'Unknown Product')
+            price = float(product.get('price', 0.0))
+
+            # 2. Update internal cart (Same logic as RFID)
+            with self.lock:
+                if pid in self.cart:
+                    self.cart[pid]['qty'] += 1
+                else:
+                    self.cart[pid] = {
+                        "name": name,
+                        "price": price,
+                        "qty": 1,
+                        "category": product.get('category', 'General'),
+                        "producer": product.get('producer', 'Unknown')
+                    }
+
+            print(f"🏷️ Barcode Scanned: {name} (${price})")
+            return product
+
+        except Exception as e:
+            print(f"🚨 Barcode Error: {str(e)}")
+            return {"error": "system_error", "message": str(e)}
+    
+    def barcode_listener(controller_instance):
+        while True:
+            upc = input("Scan Barcode: ").strip()
+            if upc:
+                controller_instance.add_by_barcode(upc)
+
+        
 
     def _handle_removal(self, tag_epc):
         """Decreases quantity or removes product from cart when EPC is lost."""
