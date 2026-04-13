@@ -12,10 +12,10 @@ print("🛰️  Scanning... (CTRL+C to stop)")
 try:
     while True:
         # 3. Pull the array directly from the controller
-        tags = ctrl.get_latest_tags()
+        tags = ctrl.get_cart()
         
         if tags:
-            print(f"Current Array: {tags}")
+            print(f"Current cart: {tags}")
         
         time.sleep(0.5) # Fast polling for testing
 except KeyboardInterrupt:
