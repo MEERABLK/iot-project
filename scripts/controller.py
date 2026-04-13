@@ -20,26 +20,29 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 class Controller:
     def __init__(self, toggle_on, toggle_off):
-        self.data = data
+        # 📧 Email & Alert Configuration
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
-
         self.last_email_time = time.time()
         self.fridge1_alert_sent = False
 
-        self.toggle_on = toggle_on  # 👈 store function
-        self.toggle_off = toggle_off
-       # self.threshold = 8
+        # 🌡️ Sensor & Threshold Data
+        self.data = data
         self.thresholds = {
-            "fridge1": 8,  # default values
+            "fridge1": 8,
             "fridge2": 8
         }
 
-        self.rfid_tags = []  # 👈 This will hold the unique tags
-        self.lock = threading.Lock() # Prevents data corruption during simultaneous read/write
-        
-        self.carts = {}
-        self.cart = {}
+        # ⚙️ Hardware Controls
+        self.toggle_on = toggle_on
+        self.toggle_off = toggle_off
+        self.lock = threading.Lock()
+
+        # 🛰️ RFID & Cart Logic
+        self.rfid_tags = []         # Current tags physically on the scanner
+        self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
+        self.cart = {}              # Stores product info and quantities
+        self.carts = {}             # For historical or multiple cart tracking
 
     def start(self):
         # Start MQTT listener
@@ -52,45 +55,66 @@ class Controller:
 
     #===RFID==
     def _rfid_background_task(self):
-        for tag_epc in get_rfid_tags():
-            
-            product = database.get_product_by_epc(tag_epc)
-            
-            if product:
-                self._handle_tag(tag_epc)
-    # Listens to the RFID generator and updates everything
-       # for updated_list in get_rfid_tags():
-           # new_tag = updated_list[-1] # The most recently scanned tag
-         
-                with self.lock:
-                    if tag_epc not in self.rfid_tags:
-                        self.rfid_tags.append(tag_epc)
-            
-            # 🚀 UPDATE DATABASE HERE
-            
-                self._save_tag_to_db(tag_epc)
-            else: 
-                print(f"❌ Unknown tag ignored: {tag_epc}")
+        """Syncs the controller state and the cart with the physical scanner."""
+        for current_tags in get_rfid_tags():
+            # Update the list for the UI display
+            with self.lock:
+                self.rfid_tags = current_tags
+
+            # 1. ADDITION: Handle newly detected tags
+            for tag_epc in current_tags:
+                if tag_epc not in self.cart_check_list:
+                    self._handle_tag(tag_epc)
+                    self.cart_check_list.add(tag_epc)
+
+            # 2. REMOVAL: Handle tags no longer on the scanner
+            for tag_epc in list(self.cart_check_list):
+                if tag_epc not in current_tags:
+                    # Remove from the cart tracking and the check list
+                    self._handle_removal(tag_epc) 
+                    self.cart_check_list.remove(tag_epc)
+                    print(f"🗑️ Tag {tag_epc} removed from scanner & cart")
 
     #===core logic===
     def _handle_tag(self, tag_epc):
-        product = database.get_product_by_epc(tag_epc)
+        """
+        Retrieves product data and updates the cart. 
+        Includes error handling for unknown tags and database issues.
+        """
+        try:
+            # 1. Fetch product from database
+            product = database.get_product_by_epc(tag_epc)
 
-        if not product:
-            print(f"❌ Unknown tag: {tag_epc}")
-            return
+            # 2. Check if the tag exists in the database
+            if not product:
+                print(f"⚠️ Unknown tag detected: {tag_epc}")
+                # You can return a custom error dict to help the UI display an alert
+                return {"error": "unknown_tag", "epc": tag_epc}
 
-        pid = product['product_id']
+            # 3. Safe data extraction
+            pid = product.get('product_id')
+            name = product.get('name', 'Unknown Product')
+            price = float(product.get('price', 0.0))
 
-    # update cart
-        if pid in self.cart:
-           self.cart[pid]['qty'] += 1
-        else:
-            self.cart[pid] = {
-            "name": product['name'],
-            "price": float(product['price']),
-            "qty": 1
-            }
+            # 4. Update internal cart
+            if pid in self.cart:
+                self.cart[pid]['qty'] += 1
+            else:
+                self.cart[pid] = {
+                    "name": name,
+                    "price": price,
+                    "qty": 1,
+                    "category": product.get('category', 'General'),
+                    "producer": product.get('producer', 'Unknown')
+                }
+
+            print(f"✅ Item added: {name} (${price})")
+            return product
+
+        except Exception as e:
+            # 5. Handle unexpected errors (e.g., Database connection loss)
+            print(f"🚨 Error processing tag {tag_epc}: {str(e)}")
+            return {"error": "system_error", "message": str(e)}
 
     # PRINT CART LIVE
         print("\n ITEM ADDED")
@@ -102,6 +126,30 @@ class Controller:
 
         print(f"💰 TOTAL: {total}\n")
 
+    def _handle_removal(self, tag_epc):
+        """Decreases quantity or removes product from cart when EPC is lost."""
+        try:
+            # 1. Fetch product to find its product_id
+            product = database.get_product_by_epc(tag_epc)
+            if not product:
+                return # Can't remove what we don't recognize
+
+            pid = product.get('product_id')
+            
+            with self.lock:
+                if pid in self.cart:
+                    # 2. Logic: If multiple items of same ID exist, decrease qty
+                    if self.cart[pid]['qty'] > 1:
+                        self.cart[pid]['qty'] -= 1
+                        print(f"➖ Decreased quantity for: {self.cart[pid]['name']}")
+                    else:
+                        # 3. Otherwise, remove the product entry entirely
+                        removed_name = self.cart[pid]['name']
+                        del self.cart[pid]
+                        print(f"🗑️ Removed from cart: {removed_name}")
+        
+        except Exception as e:
+            print(f"🚨 Error during removal of tag {tag_epc}: {e}")
 
     def _save_tag_to_db(self, tag_epc):
     # Helper to send data to your DB script.
@@ -111,7 +159,17 @@ class Controller:
     # 👇 This is what Frontend / GUI should call
     def get_latest_tags(self):
         with self.lock:
-            return list(self.rfid_tags) # Return a copy to be safe        
+            return list(self.rfid_tags) # Return a copy to be safe 
+    
+    def get_cart(self):
+        # Returns the current cart dictionary containing all scanned products,their names, prices, and quantities.
+        
+        with self.lock:
+            # We return a copy (dict()) so the frontend doesn't accidentally 
+            # modify the live data used by the background threads.
+            return dict(self.cart)
+
+           
     # def _background_tasks(self):
     #     while True:
     #         # Example: control GPIO based on temperature
