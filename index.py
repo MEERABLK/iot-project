@@ -95,6 +95,62 @@ def get_temps():
         "fridge2_temp": controller.get_fridge2_temp(),
         "fridge2_humidity": controller.get_fridge2_humidity()
     })
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+@app.route('/products', methods=['GET'])
+def get_products():
+    try:
+        products = data.get_all_products()  # must return list of dicts
+        return jsonify(products)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/products', methods=['POST'])
+def add_product():
+    try:
+        req = request.get_json()
+
+        name = req.get('name')
+        tag = req.get('tag')
+        price = req.get('price')
+
+        if not name or not tag or not price:
+            return jsonify({"error": "Missing fields"}), 400
+
+        data.add_product(name, tag, price)
+
+        return jsonify({"message": "Product added"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    try:
+        req = request.get_json()
+
+        name = req.get('name')
+        tag = req.get('tag')
+        price = req.get('price')
+
+        data.update_product(id, name, tag, price)
+
+        return jsonify({"message": "Product updated"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/products/<int:id>', methods=['DELETE'])
+def delete_product(id):
+    try:
+        data.delete_product(id)
+        return jsonify({"message": "Product deleted"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     import threading

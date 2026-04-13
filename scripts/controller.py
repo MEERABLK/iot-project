@@ -38,6 +38,7 @@ class Controller:
         self.rfid_tags = []  # 👈 This will hold the unique tags
         self.lock = threading.Lock() # Prevents data corruption during simultaneous read/write
         
+        self.carts = {}
         self.cart = {}
 
     def start(self):

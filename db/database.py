@@ -8,6 +8,15 @@ db_host = os.getenv("DB_HOST")
 db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
 
+def get_connection():
+    return mysql.connector.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database="smartstoreiotproject_db"
+    )
+
+
 def get_threshold(fridge_name):
     try:
         mydb = mysql.connector.connect(
@@ -168,3 +177,59 @@ def reduce_stock(product_id, qty):
     db.commit()
     cursor.close()
     db.close()
+
+def get_all_products():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM products")
+    results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return results    
+
+def add_product(name, tag, price):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO products (name, EPC, price) VALUES (%s, %s, %s)",
+        (name, tag, price)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def delete_product(product_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    print("Deleting product:", product_id)
+
+    cursor.execute(
+        "DELETE FROM products WHERE product_id = %s",
+        (product_id,)
+    )
+
+    conn.commit()
+
+    print("Rows affected:", cursor.rowcount)
+
+    cursor.close()
+    conn.close()   
+
+def update_product(id, name, tag, price):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "UPDATE products SET name=%s, EPC=%s, price=%s WHERE product_id=%s",
+        (name, tag, price, id)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()

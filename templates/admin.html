@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+{% include 'components/back_button.html' %}
+
+<div class="container">
+
+    <h2>Admin Panel</h2>
+
+    <!-- ADD PRODUCT -->
+    <div class="collection collection-vertical collection-shade-1">
+
+        <h3>Add Product</h3>
+
+        <form id="addForm" class="form">
+            <input type="text" id="name" placeholder="Name" required>
+            <input type="text" id="epc" placeholder="EPC (RFID Tag)" required>
+            <input type="number" id="price" placeholder="Price" required>
+            <button class="button" type="submit">Add</button>
+        </form>
+
+    </div>
+
+    <!-- PRODUCTS LIST -->
+    <div class="collection collection-vertical collection-shade-2">
+
+        <h3>Products</h3>
+
+        <div id="productList" style="width:100%"></div>
+
+    </div>
+
+</div>
+
+<script>
+
+async function loadProducts() {
+    const res = await fetch('/products');
+    const data = await res.json();
+
+    const container = document.getElementById('productList');
+    container.innerHTML = "";
+
+    data.forEach(p => {
+
+        const card = document.createElement('div');
+        card.className = "collection collection-shade-3";
+        card.style.justifyContent = "space-between";
+
+        card.innerHTML = `
+            <div>
+                <b>${p.name}</b><br>
+                EPC: ${p.epc}<br>
+                Price: $${p.price}
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="button" onclick="editProduct(${p.product_id}, '${p.name}', '${p.epc}', ${p.price})">
+                    Edit
+                </button>
+
+               <button class="button" style="background:#ff6b6b;" onclick="deleteProduct(${p.product_id})">
+    Delete
+</button>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+
+// ADD PRODUCT
+document.getElementById("addForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const product = {
+        name: document.getElementById("name").value,
+        tag: document.getElementById("epc").value,
+        price: document.getElementById("price").value
+    };
+
+    await fetch('/products', {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(product)
+    });
+
+    e.target.reset();
+    loadProducts();
+});
+
+
+// DELETE
+async function deleteProduct(id) {
+    await fetch(`/products/${id}`, {
+        method: "DELETE"
+    });
+
+    loadProducts();
+}
+
+
+// EDIT (simple prompt version for now)
+async function editProduct(id, name, epc, price) {
+
+    const newName = prompt("New name:", name);
+    const newEpc = prompt("New EPC:", epc);
+    const newPrice = prompt("New price:", price);
+
+    if (!newName || !newEpc || !newPrice) return;
+
+    await fetch(`/products/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: newName,
+            tag: newEpc,
+            price: newPrice
+        })
+    });
+
+    loadProducts();
+}
+
+
+// INIT
+loadProducts();
+
+</script>
+
+</body>
+</html>
