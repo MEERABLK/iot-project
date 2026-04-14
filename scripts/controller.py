@@ -43,10 +43,11 @@ class Controller:
         self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
         self.cart = {}              # Stores product info and quantities
         self.carts = {}             # For historical or multiple cart tracking
+        self.last_receipt = None  # 👈 Initialized as None
 
     def start(self):
         # Start MQTT listener
-        start_mqtt()
+        # start_mqtt()
 
         # Start background logic (alerts, GPIO, etc.)
         threading.Thread(target=self._background_tasks, daemon=True).start()
@@ -128,6 +129,84 @@ class Controller:
             total += item['price'] * item['qty']
 
         print(f"💰 TOTAL: {total}\n")
+
+    def get_receipt(self, customer_id):
+        """
+        Finalizes transaction and stores the receipt details internally.
+        """
+        current_cart = self.get_cart()
+        if not current_cart:
+            print("🛒 Cannot create receipt: Cart is empty.")
+            return None
+
+        # 1. Save to DB
+        receipt_id = database.create_receipt(customer_id, current_cart)
+
+        if receipt_id:
+            # 2. Fetch the finalized items from the DB
+            receipt_items = database.get_receipt_items(receipt_id)
+            
+            # 3. Store the receipt internally so send_receipt() can access it
+            self.last_receipt = {
+                "receipt_id": receipt_id,
+                "items": receipt_items,
+                "customer_id": customer_id,
+                "timestamp": time.time()
+            }
+
+            # 4. Clear local cart state
+            with self.lock:
+                self.cart = {}
+                self.cart_check_list.clear()
+            
+            print(f"📄 Receipt #{receipt_id} stored in controller memory.")
+            return self.last_receipt
+        
+        return None
+
+    def send_receipt(self, customer_email):
+        """
+        Sends the most recently stored receipt to the customer's email.
+        """
+        # 1. Check if a receipt exists in memory
+        if not hasattr(self, 'last_receipt') or self.last_receipt is None:
+            print("🚨 Error: No recent receipt found to send. Run get_receipt() first.")
+            return
+
+        receipt_data = self.last_receipt
+        receipt_id = receipt_data['receipt_id']
+
+        # 2. Build the email body
+        body = f"Thank you for shopping at SmartStore IoT!\n"
+        body += f"Receipt ID: #{receipt_id}\n"
+        body += "-" * 35 + "\n"
+        
+        total_sum = 0
+        for item in receipt_data['items']:
+            name = item.get('name', f"Product {item['product_id']}")
+            qty = item['quantity']
+            price = item['price']
+            subtotal = item['subtotal']
+            total_sum += subtotal
+            body += f"{name:<15} x{qty} @ ${price:.2f} = ${subtotal:.2f}\n"
+
+        body += "-" * 35 + "\n"
+        body += f"GRAND TOTAL: ${total_sum:.2f}\n"
+        body += f"Points Earned: {int(total_sum)}\n\n"
+        body += "We hope to see you again soon!"
+
+        # 3. Send via existing send_email script
+        try:
+            send_email.send_email(
+                subject=f"Your SmartStore Receipt #{receipt_id} 🛒",
+                body=body,
+                sender=self.email_address,
+                recipients=[customer_email],
+                password=self.email_password
+            )
+            print(f"📧 Receipt #{receipt_id} emailed to {customer_email}")
+        except Exception as e:
+            print(f"🚨 Failed to send receipt email: {e}")
 
     # === Barcode Logic ===
     def add_by_barcode(self, upc):
