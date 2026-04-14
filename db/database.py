@@ -178,6 +178,31 @@ def create_receipt(customer_id, cart):
         print("Checkout Error:", e)
         return None
 
+def get_receipt_items(receipt_id):
+    # Fetches all items associated with a specific receipt ID from the database.
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        cursor = mydb.cursor()
+
+        query = "SELECT item_id, receipt_id, product_id, quantity, price, subtotal FROM receipt_items WHERE receipt_id = %s"
+        
+        cursor.execute(query, (receipt_id,))
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching receipt items: {err}")
+        return []
+
 #inventory update 
 def reduce_stock(product_id, qty):
     db = mysql.connector.connect(
