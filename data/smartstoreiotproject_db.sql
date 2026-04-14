@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 12, 2026 at 12:42 AM
--- Server version: 11.8.3-MariaDB-0+deb13u1 from Debian
+-- Generation Time: Apr 14, 2026 at 04:36 PM
+-- Server version: 11.8.6-MariaDB-0+deb13u1 from Debian
 -- PHP Version: 8.4.16
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -20,6 +20,8 @@ SET time_zone = "+00:00";
 --
 -- Database: `smartstoreiotproject_db`
 --
+CREATE DATABASE IF NOT EXISTS `smartstoreiotproject_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+USE `smartstoreiotproject_db`;
 
 -- --------------------------------------------------------
 
@@ -27,6 +29,7 @@ SET time_zone = "+00:00";
 -- Table structure for table `admins`
 --
 
+DROP TABLE IF EXISTS `admins`;
 CREATE TABLE `admins` (
   `admin_id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
@@ -40,6 +43,7 @@ CREATE TABLE `admins` (
 -- Table structure for table `customers`
 --
 
+DROP TABLE IF EXISTS `customers`;
 CREATE TABLE `customers` (
   `customer_id` int(11) NOT NULL,
   `first_name` varchar(50) NOT NULL,
@@ -72,12 +76,13 @@ INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `pho
 -- Table structure for table `inventory`
 --
 
+DROP TABLE IF EXISTS `inventory`;
 CREATE TABLE `inventory` (
   `inventory_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT 0,
   `last_updated` datetime DEFAULT current_timestamp()
-) ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -85,6 +90,7 @@ CREATE TABLE `inventory` (
 -- Table structure for table `products`
 --
 
+DROP TABLE IF EXISTS `products`;
 CREATE TABLE `products` (
   `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -93,16 +99,20 @@ CREATE TABLE `products` (
   `upc` varchar(13) DEFAULT NULL,
   `epc` varchar(24) DEFAULT NULL,
   `producer` varchar(100) DEFAULT NULL,
-  `image` varchar(255) DEFAULT NULL
+  `image` varchar(255) DEFAULT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `epc`, `producer`, `image`) VALUES
-(1, 'Milk 1L', 'Dairy', 4.00, '9876543210123', 'A00000000000000000004938', 'Dairy Farm', NULL),
-(2, 'Coke', 'sodas', 10.00, '9568947695', 'A00000000000000000004958', 'Coke', NULL);
+INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `epc`, `producer`, `image`, `quantity`) VALUES
+(1, 'Milk 1L', 'Dairy', 4.00, '9876543210123', 'A00000000000000000004938', 'Dairy Farm', NULL, 0),
+(2, 'Coke', 'sodas', 10.00, '9568947695', 'A00000000000000000004958', 'Coke', NULL, 0),
+(3, 'Hat', 'Clothing', 15.00, '123456789012', 'A00000000000000000004956', 'Nike', NULL, 0),
+(4, 'Pants', NULL, 24.99, '495749574957', 'A00000000000000000004957', 'Adidas', NULL, 0),
+(5, 'Shirt', 'Clothing', 24.99, '493049304930', 'A00000000000000000004930', 'Clothing co.', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -110,6 +120,7 @@ INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `epc`,
 -- Table structure for table `receipts`
 --
 
+DROP TABLE IF EXISTS `receipts`;
 CREATE TABLE `receipts` (
   `receipt_id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
@@ -126,6 +137,7 @@ CREATE TABLE `receipts` (
 -- Table structure for table `receipt_items`
 --
 
+DROP TABLE IF EXISTS `receipt_items`;
 CREATE TABLE `receipt_items` (
   `item_id` int(11) NOT NULL,
   `receipt_id` int(11) DEFAULT NULL,
@@ -141,6 +153,7 @@ CREATE TABLE `receipt_items` (
 -- Table structure for table `receptions`
 --
 
+DROP TABLE IF EXISTS `receptions`;
 CREATE TABLE `receptions` (
   `reception_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
@@ -155,6 +168,7 @@ CREATE TABLE `receptions` (
 -- Table structure for table `thresholds`
 --
 
+DROP TABLE IF EXISTS `thresholds`;
 CREATE TABLE `thresholds` (
   `id` int(11) NOT NULL,
   `fridge_name` varchar(50) DEFAULT NULL,
@@ -268,7 +282,7 @@ ALTER TABLE `inventory`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `receipts`
