@@ -132,7 +132,7 @@ def add_product():
         return jsonify({"message": "Product added"}), 201
 
     except Exception as e:
-        print("ERROR:", e)  # 👈 VERY IMPORTANT
+        print("ERROR:", e) 
         return jsonify({"error": str(e)}), 500
 
        
@@ -156,7 +156,7 @@ def update_product(id):
         return jsonify({"message": "Product updated"})
 
     except Exception as e:
-        print(" UPDATE ERROR:", e)
+        print("🔥 UPDATE ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
 

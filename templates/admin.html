@@ -5,6 +5,8 @@
     <title>Admin Panel</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    
 </head>
 
 <body>
@@ -21,7 +23,7 @@
 
         <h3>Add Product</h3>
     <div class="right-panel">
-
+<div id="messageBox" class="alert d-none"></div>
         <form id="addForm" class="form">
             <input type="text" id="name" placeholder="Name" required>
             <input type="text" id="category" placeholder="Category" required>
@@ -70,7 +72,7 @@
 
     </div>
         </div>
-
+</div>
 </div>
 </div>
 
@@ -122,27 +124,35 @@ document.getElementById("addForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const product = {
-        name: document.getElementById("name").value,
-        category: document.getElementById("category").value,
+        name: document.getElementById("name").value.trim(),
+        category: document.getElementById("category").value.trim(),
         price: document.getElementById("price").value,
-        upc: document.getElementById("upc").value,
-        epc: document.getElementById("epc").value,
-        producer: document.getElementById("producer").value,
+        upc: document.getElementById("upc").value.trim(),
+        epc: document.getElementById("epc").value.trim(),
+        producer: document.getElementById("producer").value.trim(),
         quantity: document.getElementById("quantity").value,
-        image: document.getElementById("image").value || null,
-
-
-        
+        image: document.getElementById("image").value.trim()
     };
 
-    await fetch('/products', {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(product)
-    });
+    // RUN VALIDATION 
+    
+const res = await fetch('/products', {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(product)
+});
 
-    e.target.reset();
-    loadProducts();
+const data = await res.json();
+
+if (!res.ok) {
+    showMessage(data.error || "Something went wrong", "error");
+    return;
+}
+
+showMessage("Product added successfully", "success");
+
+e.target.reset();
+loadProducts();
 });
 
 
@@ -228,6 +238,48 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     closeEdit();
     loadProducts();
 });
+
+//validation
+function validateProduct(p) {
+    const nameRegex = /^[A-Za-z0-9\s\-&()]+$/;
+    const categoryRegex = /^[A-Za-z\s]{2,30}$/;
+    const priceRegex = /^\d+(\.\d{1,2})?$/;
+    const upcRegex = /^\d{8,13}$/;
+    const epcRegex = /^[A-Za-z0-9]{1,24}$/;
+    const producerRegex = /^[A-Za-z0-9\s\-&.,()]{2,50}$/;
+
+    return (
+        nameRegex.test(p.name) &&
+        categoryRegex.test(p.category) &&
+        priceRegex.test(p.price) &&
+        upcRegex.test(p.upc) &&
+        epcRegex.test(p.epc) &&
+        producerRegex.test(p.producer)
+    );
+}
+
+//js function
+function showMessage(text, type) {
+    const box = document.getElementById("messageBox");
+
+    box.innerText = text;
+
+    box.classList.remove("msg-success", "msg-error");
+
+    if (type === "error") {
+        box.classList.add("msg-error");
+    } else {
+        box.classList.add("msg-success");
+    }
+
+    box.style.display = "block";
+
+    setTimeout(() => {
+        box.innerText = "";
+        box.classList.remove("msg-success", "msg-error");
+        box.style.display = "none";
+    }, 3000);
+}
 
 </script>
 
