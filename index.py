@@ -168,6 +168,17 @@ def delete_product(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/client')
+def client_default():
+    return redirect(url_for('login'))
+
+@app.route('/client/login')
+def login():
+    return render_template('client_login.html')
+
+@app.route('/client/register')
+def register():
+    return render_template('client_register.html')
 
 if __name__ == '__main__':
     import threading
@@ -178,7 +189,3 @@ if __name__ == '__main__':
         threading.Thread(target=controller.start, daemon=True).start()
     
     socketio.run(app, debug=True)
-
-@app.route('/client')
-def client():
-    return render_template('client.html')
