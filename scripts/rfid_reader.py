@@ -5,7 +5,11 @@ import serial
 import time
 
 def get_rfid_tags(timeout=2.0):
-    ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.1)
+    try:
+        ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.1)
+    except serial.SerialException:
+        print("Error: Could not open /dev/ttyUSB0")
+        return 123456789012
     
     # Init commands
     ser.write(bytes.fromhex("0008220100000023")) # Stop

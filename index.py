@@ -116,18 +116,26 @@ def add_product():
         req = request.get_json()
 
         name = req.get('name')
-        tag = req.get('tag')
+        category = req.get('category')
         price = req.get('price')
+        upc = req.get('upc')
+        epc = req.get('epc')
+        producer = req.get('producer')
+        quantity = req.get('quantity')
+        image = req.get('image')
 
-        if not name or not tag or not price:
+        if not all([name, category, price, upc, epc, producer, quantity]):
             return jsonify({"error": "Missing fields"}), 400
 
-        data.add_product(name, tag, price)
+        data.add_product(name, category, price, upc, epc, producer, quantity, image)
 
         return jsonify({"message": "Product added"}), 201
 
     except Exception as e:
+        print("ERROR:", e) 
         return jsonify({"error": str(e)}), 500
+
+       
 
 @app.route('/products/<int:id>', methods=['PUT'])
 def update_product(id):
@@ -135,14 +143,20 @@ def update_product(id):
         req = request.get_json()
 
         name = req.get('name')
-        tag = req.get('tag')
+        category = req.get('category')
         price = req.get('price')
+        upc = req.get('upc')
+        epc = req.get('epc')
+        producer = req.get('producer')
+        quantity = req.get('quantity')
+        image = req.get('image')
 
-        data.update_product(id, name, tag, price)
+        data.update_product(id, name, category, price, upc, epc, producer, quantity, image)
 
         return jsonify({"message": "Product updated"})
 
     except Exception as e:
+        print("🔥 UPDATE ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -154,6 +168,17 @@ def delete_product(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/client')
+def client_default():
+    return redirect(url_for('login'))
+
+@app.route('/client/login')
+def login():
+    return render_template('client_login.html')
+
+@app.route('/client/register')
+def register():
+    return render_template('client_register.html')
 
 if __name__ == '__main__':
     import threading

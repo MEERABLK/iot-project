@@ -3,3 +3,4 @@ flask-socketio
 dotenv
 mysql-connector-python
 pyserial
+gpiozero

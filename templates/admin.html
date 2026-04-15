@@ -1,12 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Admin Panel</title>
+{% extends "components/base.html" %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
+{% block title %}Admin Panel{% endblock %}
 
+{% block content %}
 <body>
 
 {% include 'components/back_button.html' %}
@@ -15,21 +11,53 @@
 
     <h2>Admin Panel</h2>
 
+    <div class="dashboard">
     <!-- ADD PRODUCT -->
     <div class="collection collection-vertical collection-shade-1">
 
         <h3>Add Product</h3>
-
+    <div class="right-panel">
+<div id="messageBox" class="alert d-none"></div>
         <form id="addForm" class="form">
             <input type="text" id="name" placeholder="Name" required>
-            <input type="text" id="epc" placeholder="EPC (RFID Tag)" required>
+            <input type="text" id="category" placeholder="Category" required>
             <input type="number" id="price" placeholder="Price" required>
+            
+            <input type="text" id="upc" placeholder=" UPC (Barcode)" required>
+            <input type="text" id="epc" placeholder="EPC (RFID Tag)" required>
+            <input type="text" id="producer" placeholder="Producer" required>
+            <input type="number" id="quantity" placeholder="Quantity" required>
+            <input type="text" id="image" placeholder="Image URL">           
             <button class="button" type="submit">Add</button>
         </form>
 
+        <div class="collection collection-vertical collection-shade-3" id="editSection" style="display:none; margin-top:20px;">
+    <h3>Edit Product</h3>
+
+    <form id="editForm" class="form">
+        <input type="hidden" id="edit_id">
+
+        <input type="text" id="edit_name" placeholder="Name" required>
+        <input type="text" id="edit_category" placeholder="Category" required>
+        <input type="number" id="edit_price" placeholder="Price" required>
+
+        <input type="text" id="edit_upc" placeholder="UPC">
+        <input type="text" id="edit_epc" placeholder="EPC">
+        <input type="text" id="edit_producer" placeholder="Producer">
+        <input type="number" id="edit_quantity" placeholder="Quantity">
+        <input type="text" id="edit_image" placeholder="Image URL">
+
+        <button class="button" type="submit">Save Changes</button>
+        <button type="button" class="button" onclick="closeEdit()" style="background:#999;">
+            Cancel
+        </button>
+    </form>
+</div>
+</div>
     </div>
 
-    <!-- PRODUCTS LIST -->
+    
+    <div class="left-panel">
     <div class="collection collection-vertical collection-shade-2">
 
         <h3>Products</h3>
@@ -37,7 +65,9 @@
         <div id="productList" style="width:100%"></div>
 
     </div>
-
+        </div>
+</div>
+</div>
 </div>
 
 <script>
@@ -49,32 +79,37 @@ async function loadProducts() {
     const container = document.getElementById('productList');
     container.innerHTML = "";
 
-    data.forEach(p => {
+data.forEach(p => {
 
-        const card = document.createElement('div');
-        card.className = "collection collection-shade-3";
-        card.style.justifyContent = "space-between";
+    const card = document.createElement('div');
+    card.className = "product-card";
 
-        card.innerHTML = `
-            <div>
-                <b>${p.name}</b><br>
-                EPC: ${p.epc}<br>
-                Price: $${p.price}
-            </div>
+ card.innerHTML = `
+    <div style="display:flex; gap:10px; align-items:center;">
+        ${p.image ? `<img src="${p.image}" style="width:60px; height:60px; object-fit:cover; border-radius:10px;">` : ""}
 
-            <div style="display:flex; gap:10px;">
-                <button class="button" onclick="editProduct(${p.product_id}, '${p.name}', '${p.epc}', ${p.price})">
-                    Edit
-                </button>
+        <div>
+            <b>${p.name}</b><br>
+            $${p.price} | Qty: ${p.quantity}<br>
+            <small>${p.category || ""}</small>
+        </div>
+    </div>
 
-               <button class="button" style="background:#ff6b6b;" onclick="deleteProduct(${p.product_id})">
-    Delete
-</button>
-            </div>
-        `;
+    <div style="display:flex; gap:10px;">
+        <button class="button"
+            onclick='openEdit(${JSON.stringify(p)})'>
+            Edit
+        </button>
 
-        container.appendChild(card);
-    });
+        <button class="button" style="background:#ff6b6b;"
+            onclick="deleteProduct(${p.product_id})">
+            Delete
+        </button>
+    </div>
+`;
+
+    container.appendChild(card);
+});
 }
 
 
@@ -83,19 +118,35 @@ document.getElementById("addForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const product = {
-        name: document.getElementById("name").value,
-        tag: document.getElementById("epc").value,
-        price: document.getElementById("price").value
+        name: document.getElementById("name").value.trim(),
+        category: document.getElementById("category").value.trim(),
+        price: document.getElementById("price").value,
+        upc: document.getElementById("upc").value.trim(),
+        epc: document.getElementById("epc").value.trim(),
+        producer: document.getElementById("producer").value.trim(),
+        quantity: document.getElementById("quantity").value,
+        image: document.getElementById("image").value.trim()
     };
 
-    await fetch('/products', {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(product)
-    });
+    // RUN VALIDATION 
+    
+const res = await fetch('/products', {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(product)
+});
 
-    e.target.reset();
-    loadProducts();
+const data = await res.json();
+
+if (!res.ok) {
+    showMessage(data.error || "Something went wrong", "error");
+    return;
+}
+
+showMessage("Product added successfully", "success");
+
+e.target.reset();
+loadProducts();
 });
 
 
@@ -135,7 +186,98 @@ async function editProduct(id, name, epc, price) {
 // INIT
 loadProducts();
 
+
+
+
+//
+function openEdit(p) {
+    document.getElementById("editSection").style.display = "block";
+
+    document.getElementById("edit_id").value = p.product_id;
+    document.getElementById("edit_name").value = p.name;
+    document.getElementById("edit_category").value = p.category || "";
+    document.getElementById("edit_price").value = p.price;
+
+    document.getElementById("edit_upc").value = p.upc || "";
+    document.getElementById("edit_epc").value = p.epc || "";
+    document.getElementById("edit_producer").value = p.producer || "";
+    document.getElementById("edit_quantity").value = p.quantity || 0;
+    document.getElementById("edit_image").value = p.image || "";
+}
+document.getElementById("editForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("edit_id").value;
+
+    const updatedProduct = {
+        name: document.getElementById("edit_name").value,
+        category: document.getElementById("edit_category").value,
+        price: parseFloat(document.getElementById("edit_price").value),
+        upc: document.getElementById("edit_upc").value,
+        epc: document.getElementById("edit_epc").value,
+        producer: document.getElementById("edit_producer").value,
+        quantity: parseInt(document.getElementById("edit_quantity").value) || 0,
+        image: document.getElementById("edit_image").value
+    };
+
+    const res = await fetch(`/products/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(updatedProduct)
+    });
+
+    const data = await res.json();
+    console.log(data);
+
+    closeEdit();
+    loadProducts();
+});
+
+//validation
+function validateProduct(p) {
+    const nameRegex = /^[A-Za-z0-9\s\-&()]+$/;
+    const categoryRegex = /^[A-Za-z\s]{2,30}$/;
+    const priceRegex = /^\d+(\.\d{1,2})?$/;
+    const upcRegex = /^\d{8,13}$/;
+    const epcRegex = /^[A-Za-z0-9]{1,24}$/;
+    const producerRegex = /^[A-Za-z0-9\s\-&.,()]{2,50}$/;
+
+    return (
+        nameRegex.test(p.name) &&
+        categoryRegex.test(p.category) &&
+        priceRegex.test(p.price) &&
+        upcRegex.test(p.upc) &&
+        epcRegex.test(p.epc) &&
+        producerRegex.test(p.producer)
+    );
+}
+
+//js function
+function showMessage(text, type) {
+    const box = document.getElementById("messageBox");
+
+    box.innerText = text;
+
+    box.classList.remove("msg-success", "msg-error");
+
+    if (type === "error") {
+        box.classList.add("msg-error");
+    } else {
+        box.classList.add("msg-success");
+    }
+
+    box.style.display = "block";
+
+    setTimeout(() => {
+        box.innerText = "";
+        box.classList.remove("msg-success", "msg-error");
+        box.style.display = "none";
+    }, 3000);
+}
+
 </script>
 
 </body>
 </html>
+ {% endblock %}
+ 
