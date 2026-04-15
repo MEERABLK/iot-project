@@ -178,3 +178,7 @@ if __name__ == '__main__':
         threading.Thread(target=controller.start, daemon=True).start()
     
     socketio.run(app, debug=True)
+
+@app.route('/client')
+def client():
+    return render_template('client.html')

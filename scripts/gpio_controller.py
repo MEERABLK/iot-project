@@ -1,64 +1,48 @@
-import RPi.GPIO as GPIO
-import time
+from gpiozero.pins.mock import MockFactory, MockPWMPin
+from gpiozero import Device
 
-    
-#GPIO setup
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+# Set the pin factory to Mock AND enable PWM support
+Device.pin_factory = MockFactory(pin_class=MockPWMPin)
 
-successLed = 17
-failLed = 16
-buzzer = 21
-Motor1 = 22 # Enable Pin
-Motor2 = 27 # Input Pin
-Motor3 = 17 # Input Pin
+# Now your imports will work
+from gpiozero import LED, Buzzer, Motor
+from time import sleep
 
+# Change one of these to an unused GPIO pin
+success_led = LED(17) 
+fail_led = LED(16)
+buzzer = Buzzer(21)
 
+# If the motor is actually on Pin 23 instead of 17:
+fan = Motor(forward=27, backward=23, enable=22)
 
 def success():
-    GPIO.setup(successLed, GPIO.OUT)
-    GPIO.output(successLed, 1)
-    time.sleep(1)
-    GPIO.output(successLed, 0)
-    
+    success_led.on()
+    sleep(1)
+    success_led.off()
 
 def failure():
-    GPIO.setup(failLed, GPIO.OUT)
-    GPIO.setup(buzzer, GPIO.OUT)
-
-    GPIO.output(failLed, 1)
-    GPIO.output(buzzer, True)
     print("Failure detected!")
+    fail_led.on()
+    buzzer.on()
     print("Buzzer On")
-    time.sleep(1)
-    GPIO.output(failLed, 0)
-    GPIO.output(buzzer, False)
+    sleep(1)
+    fail_led.off()
+    buzzer.off()
     print("Buzzer Off")
 
-def spinMotor():
+def spin_motor():
     print("Turning on fan")
-    GPIO.setup(Motor1,GPIO.OUT)
-    GPIO.setup(Motor2,GPIO.OUT)
-    GPIO.setup(Motor3,GPIO.OUT)
-    GPIO.output(Motor1,GPIO.HIGH)
-    GPIO.output(Motor2,GPIO.HIGH)
-    GPIO.output(Motor3,GPIO.LOW)
+    fan.forward() # Sets 27 High, 17 Low, and 22 High
 
-def stopMotor():
+def stop_motor():
     print("Stopping fan")
-    GPIO.setup(Motor1,GPIO.OUT)
-    GPIO.setup(Motor2,GPIO.OUT)
-    GPIO.setup(Motor3,GPIO.OUT)
-    GPIO.output(Motor1,GPIO.LOW)
-    GPIO.output(Motor2,GPIO.LOW)
-    GPIO.output(Motor3,GPIO.LOW)
+    fan.stop() # Sets all motor pins Low
 
 def cleanup():
-    GPIO.cleanup()
-
-#success()
-#time.sleep(2)
-#failure()
-# spinMotor()
-# stopMotor()
-# GPIO.cleanup()
+    # gpiozero handles cleanup automatically when the script exits,
+    # but you can manually close devices if needed.
+    success_led.close()
+    fail_led.close()
+    buzzer.close()
+    fan.close()

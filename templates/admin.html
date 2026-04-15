@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Admin Panel</title>
+{% extends "components/base.html" %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% block title %}Admin Panel{% endblock %}
 
-    
-</head>
-
+{% block content %}
 <body>
 
 {% include 'components/back_button.html' %}
@@ -285,3 +279,5 @@ function showMessage(text, type) {
 
 </body>
 </html>
+ {% endblock %}
+ 

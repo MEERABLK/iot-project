@@ -1,13 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IoT Dashboard</title>
+{% extends "components/base.html" %}
 
-    <link rel="stylesheet" href="../static/css/style.css">
+{% block title %}IoT Dashboard{% endblock %}
 
-</head>
+{% block content %}
 <body>
     <h1>IoT Dashboard</h1>
     <div class="container">
@@ -17,7 +12,18 @@
                     Phase 2 - Fridges
                 </div>
             </a>
+            <a href="admin">
+                <div class="button">
+                    Phase 3 - Admin
+                </div>
+            </a>
+            <a href="client">
+                <div class="button">
+                    Phase 3 - Client
+                </div>
+            </a>
         </div>
     </div>
 </body>
 </html>
+{% endblock %}
