@@ -31,6 +31,7 @@
             <input type="text" id="epc" placeholder="EPC (RFID Tag)" required>
             <input type="text" id="producer" placeholder="Producer" required>
             <input type="number" id="quantity" placeholder="Quantity" required>
+            <input type="text" id="image" placeholder="Image URL">           
             <button class="button" type="submit">Add</button>
         </form>
 </div>
@@ -64,25 +65,29 @@ data.forEach(p => {
     const card = document.createElement('div');
     card.className = "product-card";
 
-    card.innerHTML = `
+ card.innerHTML = `
+    <div style="display:flex; gap:10px; align-items:center;">
+        ${p.image ? `<img src="${p.image}" style="width:60px; height:60px; object-fit:cover; border-radius:10px;">` : ""}
+
         <div>
             <b>${p.name}</b><br>
             $${p.price} | Qty: ${p.quantity}<br>
             <small>${p.category || ""}</small>
         </div>
+    </div>
 
-        <div style="display:flex; gap:10px;">
-            <button class="button"
-                onclick="editProduct(${p.product_id}, '${p.name}', '${p.epc}', ${p.price})">
-                Edit
-            </button>
+    <div style="display:flex; gap:10px;">
+        <button class="button"
+            onclick="editProduct(${p.product_id}, '${p.name}', '${p.epc}', ${p.price})">
+            Edit
+        </button>
 
-            <button class="button" style="background:#ff6b6b;"
-                onclick="deleteProduct(${p.product_id})">
-                Delete
-            </button>
-        </div>
-    `;
+        <button class="button" style="background:#ff6b6b;"
+            onclick="deleteProduct(${p.product_id})">
+            Delete
+        </button>
+    </div>
+`;
 
     container.appendChild(card);
 });
@@ -98,10 +103,10 @@ document.getElementById("addForm").addEventListener("submit", async (e) => {
         category: document.getElementById("category").value,
         price: document.getElementById("price").value,
         upc: document.getElementById("upc").value,
-        upc: document.getElementById("epc").value,
+        epc: document.getElementById("epc").value,
         producer: document.getElementById("producer").value,
         quantity: document.getElementById("quantity").value,
-        image: document.getElementById("image").value,
+        image: document.getElementById("image").value || null,
 
 
         

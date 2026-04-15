@@ -4,9 +4,12 @@ from dotenv import load_dotenv
 import os
 load_dotenv()  # loads variables from .env
 
+# from db.database import get_connection
+
 db_host = os.getenv("DB_HOST")
 db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
+
 
 def get_connection():
     return mysql.connector.connect(
@@ -121,25 +124,6 @@ def get_product_by_epc(epc):
 
     return result
 
-## Phase 2 products upc
-def get_product_by_upc(upc):
-    mydb = mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
-
-    cursor = mydb.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM products WHERE UPC = %s", (upc,))
-    result = cursor.fetchone()
-
-    cursor.close()
-    mydb.close()
-
-    return result
-
 # checkout function
 def create_receipt(customer_id, cart):
     try:
@@ -178,31 +162,6 @@ def create_receipt(customer_id, cart):
         print("Checkout Error:", e)
         return None
 
-def get_receipt_items(receipt_id):
-    # Fetches all items associated with a specific receipt ID from the database.
-    try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
-        cursor = mydb.cursor()
-
-        query = "SELECT item_id, receipt_id, product_id, quantity, price, subtotal FROM receipt_items WHERE receipt_id = %s"
-        
-        cursor.execute(query, (receipt_id,))
-        results = cursor.fetchall()
-
-        cursor.close()
-        mydb.close()
-
-        return results
-
-    except mysql.connector.Error as err:
-        print(f"🚨 Database Error fetching receipt items: {err}")
-        return []
-
 #inventory update 
 def reduce_stock(product_id, qty):
     db = mysql.connector.connect(
@@ -214,7 +173,7 @@ def reduce_stock(product_id, qty):
     cursor = db.cursor()
 
     cursor.execute(
-        "UPDATE products SET quantity = quantity - %s WHERE product_id = %s",
+        "UPDATE inventory SET quantity = quantity - %s WHERE product_id = %s",
         (qty, product_id)
     )
 
@@ -234,14 +193,14 @@ def get_all_products():
 
     return results    
 
-def add_product(name, tag, price):
+def add_product(name, category, price, upc, epc, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "INSERT INTO products (name, EPC, price) VALUES (%s, %s, %s)",
-        (name, tag, price)
-    )
+    cursor.execute("""
+    INSERT INTO products (name, category, price, upc, epc, producer, quantity, image)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+""", (name, category, price, upc, epc, producer, quantity, image))
 
     conn.commit()
     cursor.close()
@@ -251,28 +210,26 @@ def delete_product(product_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    print("Deleting product:", product_id)
-
     cursor.execute(
         "DELETE FROM products WHERE product_id = %s",
         (product_id,)
     )
 
     conn.commit()
-
-    print("Rows affected:", cursor.rowcount)
-
     cursor.close()
-    conn.close()   
+    conn.close()
 
-def update_product(id, name, tag, price):
+def update_product(id, name, category, price, upc, epc, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "UPDATE products SET name=%s, EPC=%s, price=%s WHERE product_id=%s",
-        (name, tag, price, id)
-    )
+    cursor.execute("""
+        UPDATE products 
+        SET name=%s, category=%s, price=%s, upc=%s, epc=%s, quantity=%s, producer=%s, image=%s
+        WHERE product_id=%s
+    """, (name, category, price, upc, epc, quantity, producer, image, id))
+
+    
 
     conn.commit()
     cursor.close()
