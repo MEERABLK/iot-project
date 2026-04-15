@@ -34,6 +34,29 @@
             <input type="text" id="image" placeholder="Image URL">           
             <button class="button" type="submit">Add</button>
         </form>
+
+        <div class="collection collection-vertical collection-shade-3" id="editSection" style="display:none; margin-top:20px;">
+    <h3>Edit Product</h3>
+
+    <form id="editForm" class="form">
+        <input type="hidden" id="edit_id">
+
+        <input type="text" id="edit_name" placeholder="Name" required>
+        <input type="text" id="edit_category" placeholder="Category" required>
+        <input type="number" id="edit_price" placeholder="Price" required>
+
+        <input type="text" id="edit_upc" placeholder="UPC">
+        <input type="text" id="edit_epc" placeholder="EPC">
+        <input type="text" id="edit_producer" placeholder="Producer">
+        <input type="number" id="edit_quantity" placeholder="Quantity">
+        <input type="text" id="edit_image" placeholder="Image URL">
+
+        <button class="button" type="submit">Save Changes</button>
+        <button type="button" class="button" onclick="closeEdit()" style="background:#999;">
+            Cancel
+        </button>
+    </form>
+</div>
 </div>
     </div>
 
@@ -78,7 +101,7 @@ data.forEach(p => {
 
     <div style="display:flex; gap:10px;">
         <button class="button"
-            onclick="editProduct(${p.product_id}, '${p.name}', '${p.epc}', ${p.price})">
+            onclick='openEdit(${JSON.stringify(p)})'>
             Edit
         </button>
 
@@ -158,6 +181,53 @@ async function editProduct(id, name, epc, price) {
 
 // INIT
 loadProducts();
+
+
+
+
+//
+function openEdit(p) {
+    document.getElementById("editSection").style.display = "block";
+
+    document.getElementById("edit_id").value = p.product_id;
+    document.getElementById("edit_name").value = p.name;
+    document.getElementById("edit_category").value = p.category || "";
+    document.getElementById("edit_price").value = p.price;
+
+    document.getElementById("edit_upc").value = p.upc || "";
+    document.getElementById("edit_epc").value = p.epc || "";
+    document.getElementById("edit_producer").value = p.producer || "";
+    document.getElementById("edit_quantity").value = p.quantity || 0;
+    document.getElementById("edit_image").value = p.image || "";
+}
+document.getElementById("editForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("edit_id").value;
+
+    const updatedProduct = {
+        name: document.getElementById("edit_name").value,
+        category: document.getElementById("edit_category").value,
+        price: parseFloat(document.getElementById("edit_price").value),
+        upc: document.getElementById("edit_upc").value,
+        epc: document.getElementById("edit_epc").value,
+        producer: document.getElementById("edit_producer").value,
+        quantity: parseInt(document.getElementById("edit_quantity").value) || 0,
+        image: document.getElementById("edit_image").value
+    };
+
+    const res = await fetch(`/products/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(updatedProduct)
+    });
+
+    const data = await res.json();
+    console.log(data);
+
+    closeEdit();
+    loadProducts();
+});
 
 </script>
 

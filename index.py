@@ -142,21 +142,21 @@ def update_product(id):
     try:
         req = request.get_json()
 
-        data.update_product(
-            id,
-            req.get('name'),
-            req.get('category'),
-            req.get('price'),
-            req.get('upc'),
-            req.get('epc'),
-            req.get('producer'),
-            req.get('quantity'),
-            req.get('image')
-        )
+        name = req.get('name')
+        category = req.get('category')
+        price = req.get('price')
+        upc = req.get('upc')
+        epc = req.get('epc')
+        producer = req.get('producer')
+        quantity = req.get('quantity')
+        image = req.get('image')
+
+        data.update_product(id, name, category, price, upc, epc, producer, quantity, image)
 
         return jsonify({"message": "Product updated"})
 
     except Exception as e:
+        print(" UPDATE ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
 
