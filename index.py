@@ -172,20 +172,65 @@ def delete_product(id):
 def client_default():
     return redirect(url_for('login'))
 
-@app.route('/client/login')
+@app.route('/client/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        # Capture form data
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # Here you would call your database function to verify the user
+        # user = data.verify_user(email, password)
+        
+        print(f"Login attempt for: {email}")
+        flash("Login successful!", "success")
+        return redirect(url_for('checkout')) # Redirect to store after login
+        
     return render_template('client_login.html')
+# def login():
+#     return render_template('client_login.html')
 
-@app.route('/client/register')
+@app.route('/client/register', methods=['GET', 'POST'])
 def register():
+    # This print will tell us if the request is even reaching the function
+    print(f"--- Request received: {request.method} ---")
+    if request.method == 'POST':
+
+        # Capture form data from the register page
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # Here you would call your database function to save the user
+        # data.add_user(name, email, password)
+        
+        print(f"Registering new user: {email}")
+        flash("Registration successful! Please login.", "success")
+        return redirect(url_for('login'))
+        
     return render_template('client_register.html')
+# def register():
+#     return render_template('client_register.html')
+
+# if __name__ == '__main__':
+#     import threading
+
+    
+#     # Start controller in background thread
+#     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+#         threading.Thread(target=controller.start, daemon=True).start()
+    
+#     socketio.run(app, debug=True)
 
 if __name__ == '__main__':
     import threading
 
+    # 1. Start the controller background threads
+    # We remove the WERKZEUG_RUN_MAIN check and use use_reloader=False 
+    # to ensure your hardware/RFID logic starts exactly once.
+    threading.Thread(target=controller.start, daemon=True).start()
     
-    # Start controller in background thread
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        threading.Thread(target=controller.start, daemon=True).start()
-    
-    socketio.run(app, debug=True)
+    # 2. Run the App
+    # host='0.0.0.0' allows you to access the site via the Pi's IP address
+    # use_reloader=False prevents the 405 errors caused by process duplication
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False)
