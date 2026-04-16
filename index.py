@@ -205,8 +205,6 @@ def login():
 
 @app.route('/client/register', methods=['GET', 'POST'])
 def register():
-    # This print will tell us if the request is even reaching the function
-    print(f"--- Request received: {request.method} ---")
     if request.method == 'POST':
 
         # Capture form data from the register page
@@ -221,7 +219,14 @@ def register():
         flash("Registration successful! Please login.", "success")
         return redirect(url_for('login'))
         
+        if success:
+            flash("Registration successful! Please login.", "success")
+            return redirect(url_for('login'))
+        else:
+            flash("Error: Could not create account.", "danger")
+            
     return render_template('client_register.html')
+
 # def register():
 #     return render_template('client_register.html')
 
@@ -256,29 +261,55 @@ def get_current_cart():
 def complete_purchase():
     try:
         data_req = request.get_json()
-        customer_id = data_req.get('customer_id', 1) # Default to 1 for guest
+        customer_id = session.get('user_id', 1) 
         customer_email = data_req.get('email')
 
-        # 1. Generate and Store the receipt internally
-        receipt = controller.get_receipt(customer_id)
+        # 1. Get points and calculate discount percentage
+        current_points = data.get_user_points(customer_id)
+        # 1000 points = 0.01 (1%), 2000 = 0.02 (2%), etc.
+        discount_percent = (current_points // 1000) * 0.01
         
-        if not receipt:
-            return jsonify({"status": "error", "message": "Cart is empty"}), 400
+        # Optional: Cap the discount at 50%
+        if discount_percent > 0.50:
+            discount_percent = 0.50
 
-        # 2. Send the email if an email was provided
+        # 2. Tell the controller to process with this discount
+        # Note: You'll need to update your controller.py method to accept this!
+        receipt_id = controller.process_final_checkout(customer_id, discount_percent)
+        
+        if not receipt_id:
+            return jsonify({"status": "error", "message": "Transaction failed"}), 400
+
+        # 3. Send email (the receipt logic we built earlier)
         if customer_email:
             controller.send_receipt(customer_email)
 
         return jsonify({
             "status": "success", 
-            "message": "Purchase completed!",
-            "receipt_id": receipt['receipt_id']
+            "message": f"Success! Applied {int(discount_percent*100)}% discount.",
+            "receipt_id": receipt_id
         })
 
     except Exception as e:
-        print(f"❌ Checkout Error: {e}")
+        print(f"Checkout Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/user-info')
+def get_user_info():
+    # Get the logged-in user's ID from the session
+    customer_id = session.get('user_id')
     
+    if not customer_id:
+        return jsonify({"points": 0, "logged_in": False})
+    
+    # Call the new database function
+    points = data.get_user_points(customer_id)
+    
+    return jsonify({
+        "points": points,
+        "logged_in": True
+    })
+
 #     # Start controller in background thread
 #     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
 #         threading.Thread(target=controller.start, daemon=True).start()
