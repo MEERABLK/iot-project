@@ -77,6 +77,7 @@ def set_threshold(fridge_name, threshold_value):
         if mydb and mydb.is_connected():
             mycursor.close()
             mydb.close()
+
 def verify_user(email, password):
     """
     Checks if a user exists with the given email and password.
@@ -193,15 +194,26 @@ def create_receipt(customer_id, cart):
 
         total = sum(item['price'] * item['qty'] for item in cart.values())
         points = int(total)  # simple system
+        final_total = raw_total * (1 - discount_percent)
+        
+        # Define the variable clearly here
+        points_to_add = int(final_total) 
 
-        # Insert receipt
+        # 1. Insert receipt
         cursor.execute(
             "INSERT INTO receipts (customer_id, total, points_earned) VALUES (%s, %s, %s)",
-            (customer_id, total, points)
+            (customer_id, final_total, points_to_add)
         )
         receipt_id = cursor.lastrowid
 
-        # Insert items
+        # 2. Update customer's total points 
+        # Use 'points_to_add' here so it matches the variable above!
+        cursor.execute(
+            "UPDATE customers SET points = points + %s WHERE customer_id = %s",
+            (points_to_add, customer_id)
+        )
+
+        # 3. Insert items
         for pid, item in cart.items():
             cursor.execute(
                 "INSERT INTO receipt_items (receipt_id, product_id, quantity, price) VALUES (%s, %s, %s, %s)",
@@ -215,9 +227,35 @@ def create_receipt(customer_id, cart):
         return receipt_id
 
     except Exception as e:
-        print("Checkout Error:", e)
+        print("Checkout Error:", e) # This is where 'name points is not defined' was coming from
         return None
-    
+
+def get_user_points(customer_id):
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        cursor = mydb.cursor(dictionary=True)
+
+        # Fetch only the points for this specific user
+        query = "SELECT points FROM customers WHERE customer_id = %s"
+        cursor.execute(query, (customer_id,))
+        
+        result = cursor.fetchone()
+
+        cursor.close()
+        mydb.close()
+
+        # Return the points as an integer, default to 0 if user not found
+        return result['points'] if result else 0
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching points: {err}")
+        return 0
+          
 def get_receipt_items(receipt_id):
     # Fetches all items associated with a specific receipt ID from the database.
     try:

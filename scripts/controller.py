@@ -296,6 +296,46 @@ class Controller:
             # We return a copy (dict()) so the frontend doesn't accidentally 
             # modify the live data used by the background threads.
             return dict(self.cart)
+        
+    def process_final_checkout(self, customer_id, discount_percent):
+        """
+        Calculates the discounted total, saves the receipt to the DB,
+        updates customer points, and clears the current cart.
+        """
+        try:
+            # 1. Check if the cart is empty before proceeding
+            if not self.cart:
+                print("⚠️ Checkout failed: Cart is empty.")
+                return None
+
+            # 2. Call the database function to save the receipt and update points
+            # Note: We pass the discount_percent so the DB saves the actual price paid
+            from db import database as data # Ensure import is available
+            receipt_id = data.create_receipt(customer_id, self.cart, discount_percent)
+
+            if receipt_id:
+                # 3. Store the receipt ID globally in the controller 
+                # so send_receipt() knows which one to fetch
+                self.last_receipt_id = receipt_id
+                
+                # 4. CLEAR THE CART
+                # This is crucial so the next customer starts at $0.00
+                self.cart = {}
+                
+                # 5. Notify the frontend via SocketIO that the cart is now empty
+                # (Assuming you have self.socketio initialized in your controller)
+                if hasattr(self, 'socketio'):
+                    self.socketio.emit('cart_updated', {'cart': {}, 'total': 0})
+                
+                print(f"✅ Controller: Checkout finalized for Receipt #{receipt_id}")
+                return receipt_id
+            else:
+                print("❌ Controller: Database failed to create receipt.")
+                return None
+
+        except Exception as e:
+            print(f"🚨 Controller Error during checkout: {e}")
+            return None
 
            
     # def _background_tasks(self):

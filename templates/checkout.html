@@ -32,6 +32,10 @@
 </style>
 <div class="container">
     <h2>Your Cart</h2>
+    
+    <h3>Reward Points:</h3> <h3 id="user-points">Loading...</h3>
+    <br>
+    <h3>Applied Discount:</h3> <h3 id="discount-text">0%</h3>
 
     <table class="collection collection-shade-1">
         <thead>
@@ -64,37 +68,53 @@
 
 <script>
     async function updateCartDisplay() {
-        try {
-            const response = await fetch('/api/cart');
-            const cart = await response.json();
-            const tbody = document.getElementById('cart-table-body');
-            const totalDisplay = document.getElementById('cart-total');
-            
-            tbody.innerHTML = ''; // Clear existing rows
-            let grandTotal = 0;
+    try {
+        const response = await fetch('/api/cart');
+        const cart = await response.json();
+        const tbody = document.getElementById('cart-table-body');
+        const totalDisplay = document.getElementById('cart-total');
+        
+        // --- Added: Fetch User Info for Points ---
+        // You can create a simple /api/user-info route for this
+        const userRes = await fetch('/api/user-info'); 
+        const userData = await userRes.json();
+        const points = userData.points || 0;
+        const discountPercent = Math.floor(points / 1000) / 100; // 0.01 for 1000
+        
+        document.getElementById('user-points').innerText = points;
+        document.getElementById('discount-text').innerText = (discountPercent * 100) + "%";
+        // ------------------------------------------
 
-            if (cart.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">Your cart is empty. Scan items to begin!</td></tr>';
-            } else {
-                cart.forEach(item => {
-                    grandTotal += item.subtotal;
-                    const row = `
-                        <tr>
-                            <td>${item.name}</td>
-                            <td style="text-align: right;">$${item.price.toFixed(2)}</td>
-                            <td style="text-align: center;">${item.qty}</td>
-                            <td style="text-align: right;">$${item.subtotal.toFixed(2)}</td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-            }
-            
-            totalDisplay.innerText = `$${grandTotal.toFixed(2)}`;
-        } catch (error) {
-            console.error("Error fetching cart:", error);
+        tbody.innerHTML = ''; 
+        let subtotalTotal = 0;
+
+        if (cart.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">Your cart is empty. Scan items to begin!</td></tr>';
+        } else {
+            cart.forEach(item => {
+                subtotalTotal += item.subtotal;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td style="text-align: right;">$${item.price.toFixed(2)}</td>
+                        <td style="text-align: center;">${item.qty}</td>
+                        <td style="text-align: right;">$${item.subtotal.toFixed(2)}</td>
+                    </tr>`;
+            });
         }
+        
+        // Calculate final total after discount
+        const discountAmount = subtotalTotal * discountPercent;
+        const finalTotal = subtotalTotal - discountAmount;
+        
+        totalDisplay.innerHTML = `
+            <small style="text-decoration: line-through; color: #888;">$${subtotalTotal.toFixed(2)}</small><br>
+            <strong>$${finalTotal.toFixed(2)}</strong>
+        `;
+    } catch (error) {
+        console.error("Error fetching cart:", error);
     }
+}
 
     // Refresh the cart every 2 seconds to show RFID/Barcode updates live
     setInterval(updateCartDisplay, 3000);
