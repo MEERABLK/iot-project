@@ -77,7 +77,43 @@ def set_threshold(fridge_name, threshold_value):
         if mydb and mydb.is_connected():
             mycursor.close()
             mydb.close()
+def verify_user(email, password):
+    """
+    Checks if a user exists with the given email and password.
+    Returns the user dictionary if successful, None otherwise.
+    """
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        # Using dictionary=True so we can access user['id'] later
+        cursor = mydb.cursor(dictionary=True)
+
+        # Query to find the user by email
+        # NOTE: In a production app, you would fetch by email, 
+        # then verify a hashed password using bcrypt or hashlib.
+        query = "SELECT * FROM customers WHERE email = %s AND password = %s"
+        cursor.execute(query, (email, password))
         
+        user = cursor.fetchone()
+
+        cursor.close()
+        mydb.close()
+
+        if user:
+            print(f"✅ User verified: {email}")
+            return user
+        else:
+            print(f"❌ Verification failed for: {email}")
+            return None
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error during verification: {err}")
+        return None
+    
 def add_customer(first, last, email, phone, address, city, province, postal_code):
     try:
         mydb = mysql.connector.connect(
@@ -103,6 +139,7 @@ def add_customer(first, last, email, phone, address, city, province, postal_code
     except mysql.connector.Error as err:
         print("Database Error:", err)
         return False
+    
 
 
 ## Phase 2 products epc
@@ -117,6 +154,25 @@ def get_product_by_epc(epc):
     cursor = mydb.cursor(dictionary=True)
 
     cursor.execute("SELECT * FROM products WHERE EPC = %s", (epc,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    mydb.close()
+
+    return result
+
+## Phase 2 products upc
+def get_product_by_upc(upc):
+    mydb = mysql.connector.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database="smartstoreiotproject_db"
+    )
+
+    cursor = mydb.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM products WHERE UPC = %s", (upc,))
     result = cursor.fetchone()
 
     cursor.close()
@@ -161,6 +217,31 @@ def create_receipt(customer_id, cart):
     except Exception as e:
         print("Checkout Error:", e)
         return None
+    
+def get_receipt_items(receipt_id):
+    # Fetches all items associated with a specific receipt ID from the database.
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        cursor = mydb.cursor(dictionary=True)
+
+        query = "SELECT item_id, receipt_id, product_id, quantity, price, subtotal FROM receipt_items WHERE receipt_id = %s"
+        
+        cursor.execute(query, (receipt_id,))
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching receipt items: {err}")
+        return []
 
 #inventory update 
 def reduce_stock(product_id, qty):
