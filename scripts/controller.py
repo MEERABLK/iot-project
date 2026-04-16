@@ -298,45 +298,47 @@ class Controller:
             return dict(self.cart)
         
     def process_final_checkout(self, customer_id, discount_percent):
-        """
-        Calculates the discounted total, saves the receipt to the DB,
-        updates customer points, and clears the current cart.
-        """
         try:
-            # 1. Check if the cart is empty before proceeding
             if not self.cart:
                 print("⚠️ Checkout failed: Cart is empty.")
                 return None
 
-            # 2. Call the database function to save the receipt and update points
-            # Note: We pass the discount_percent so the DB saves the actual price paid
-            from db import database as data # Ensure import is available
+            # 1. Save to DB (returns the integer ID)
+            from db import database as data
             receipt_id = data.create_receipt(customer_id, self.cart, discount_percent)
 
             if receipt_id:
-                # 3. Store the receipt ID globally in the controller 
-                # so send_receipt() knows which one to fetch
-                self.last_receipt_id = receipt_id
+                # --- NEW: Internal Hand-off for Emailing ---
+                # 2. Fetch the items back from the DB so we have subtotals/names
+                receipt_items = data.get_receipt_items(receipt_id)
                 
-                # 4. CLEAR THE CART
-                # This is crucial so the next customer starts at $0.00
-                self.cart = {}
+                # 3. Store in the exact format send_receipt expects
+                self.last_receipt = {
+                    "receipt_id": receipt_id,
+                    "items": receipt_items,
+                    "customer_id": customer_id
+                }
+                # ------------------------------------------
+
+                # 4. Clear the cart state
+                with self.lock:
+                    self.cart = {}
+                    # Clear any other tracking lists you have
+                    if hasattr(self, 'cart_check_list'):
+                        self.cart_check_list.clear()
                 
-                # 5. Notify the frontend via SocketIO that the cart is now empty
-                # (Assuming you have self.socketio initialized in your controller)
+                # 5. Notify frontend
                 if hasattr(self, 'socketio'):
                     self.socketio.emit('cart_updated', {'cart': {}, 'total': 0})
                 
                 print(f"✅ Controller: Checkout finalized for Receipt #{receipt_id}")
                 return receipt_id
             else:
-                print("❌ Controller: Database failed to create receipt.")
                 return None
 
         except Exception as e:
             print(f"🚨 Controller Error during checkout: {e}")
             return None
-
            
     # def _background_tasks(self):
     #     while True:
