@@ -435,7 +435,7 @@ def get_product_by_epc(epc):
     return result
 
 ## Phase 2 products upc
-def get_product_by_epc(upc):
+def get_product_by_upc(upc):
     mydb = mysql.connector.connect(
         host=db_host,
         user=db_user,
