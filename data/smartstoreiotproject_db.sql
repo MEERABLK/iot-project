@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 14, 2026 at 04:36 PM
--- Server version: 11.8.6-MariaDB-0+deb13u1 from Debian
+-- Generation Time: Apr 16, 2026 at 02:02 AM
+-- Server version: 11.8.3-MariaDB-0+deb13u1 from Debian
 -- PHP Version: 8.4.16
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `smartstoreiotproject_db`
 --
-CREATE DATABASE IF NOT EXISTS `smartstoreiotproject_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
-USE `smartstoreiotproject_db`;
 
 -- --------------------------------------------------------
 
@@ -29,7 +27,6 @@ USE `smartstoreiotproject_db`;
 -- Table structure for table `admins`
 --
 
-DROP TABLE IF EXISTS `admins`;
 CREATE TABLE `admins` (
   `admin_id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
@@ -43,11 +40,10 @@ CREATE TABLE `admins` (
 -- Table structure for table `customers`
 --
 
-DROP TABLE IF EXISTS `customers`;
 CREATE TABLE `customers` (
   `customer_id` int(11) NOT NULL,
-  `first_name` varchar(50) NOT NULL,
-  `last_name` varchar(50) NOT NULL,
+  `first_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
   `email` varchar(100) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `address` varchar(150) DEFAULT NULL,
@@ -55,20 +51,21 @@ CREATE TABLE `customers` (
   `province` varchar(50) DEFAULT NULL,
   `postal_code` varchar(10) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `membership_number` varchar(20) DEFAULT NULL,
   `points` int(11) DEFAULT 0,
-  `password` varchar(255) NOT NULL
+  `password` varchar(255) NOT NULL,
+  `username` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `phone`, `address`, `city`, `province`, `postal_code`, `created_at`, `membership_number`, `points`, `password`) VALUES
-(1, 'Alex', 'Smith', 'alex.smith@email.com', '514-123-4567', '123 Cali St', 'Montreal', 'QC', 'H4N497', '2026-02-23 22:35:14', NULL, 0, ''),
-(17, 'Meerab', 'Khan', 'tera@gmail.com', '514-456-9870', '123 St-Marie', 'Quebec', 'Montreal', 'H4R27U', '2026-02-26 04:37:56', NULL, 0, ''),
-(18, 'gd', 'dg', 'juko@gmail.com', 'das', 'asd', 'asd', 'ads', 'das', '2026-02-26 04:47:55', NULL, 0, ''),
-(19, 'df', 'sdf', 'meerab@gmai.com', '5146789900', '456 Boulevard Nac', 'Manitoba', 'dsf', 'H5N2O9', '2026-02-26 05:19:10', NULL, 0, '');
+INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `phone`, `address`, `city`, `province`, `postal_code`, `created_at`, `points`, `password`, `username`) VALUES
+(1, 'Alex', 'Smith', 'alex.smith@email.com', '514-123-4567', '123 Cali St', 'Montreal', 'QC', 'H4N497', '2026-02-23 22:35:14', 0, 'pokemone1', NULL),
+(17, 'Meerab', 'Khan', 'tera@gmail.com', '514-456-9870', '123 St-Marie', 'Quebec', 'Montreal', 'H4R27U', '2026-02-26 04:37:56', 0, '', NULL),
+(18, 'gd', 'dg', 'juko@gmail.com', 'das', 'asd', 'asd', 'ads', 'das', '2026-02-26 04:47:55', 0, '', NULL),
+(19, 'df', 'sdf', 'meerab@gmai.com', '5146789900', '456 Boulevard Nac', 'Manitoba', 'dsf', 'H5N2O9', '2026-02-26 05:19:10', 0, '', NULL),
+(26, NULL, NULL, 'lowkeymischievous@gmail.com', NULL, NULL, NULL, NULL, NULL, '2026-04-16 01:21:17', 4, 'pokemone1', '2388387');
 
 -- --------------------------------------------------------
 
@@ -76,7 +73,6 @@ INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `pho
 -- Table structure for table `inventory`
 --
 
-DROP TABLE IF EXISTS `inventory`;
 CREATE TABLE `inventory` (
   `inventory_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
@@ -90,7 +86,6 @@ CREATE TABLE `inventory` (
 -- Table structure for table `products`
 --
 
-DROP TABLE IF EXISTS `products`;
 CREATE TABLE `products` (
   `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -112,7 +107,8 @@ INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `epc`,
 (2, 'Coke', 'sodas', 10.00, '9568947695', 'A00000000000000000004958', 'Coke', NULL, 0),
 (3, 'Hat', 'Clothing', 15.00, '123456789012', 'A00000000000000000004956', 'Nike', NULL, 0),
 (4, 'Pants', NULL, 24.99, '495749574957', 'A00000000000000000004957', 'Adidas', NULL, 0),
-(5, 'Shirt', 'Clothing', 24.99, '493049304930', 'A00000000000000000004930', 'Clothing co.', NULL, 0);
+(5, 'Shirt', 'Clothing', 24.99, '493049304930', 'A00000000000000000004930', 'Clothing co.', NULL, 0),
+(6, 'KitKat', 'chocolates', 7.00, '789012456556', 'A00000000000000000004963', 'forgot', 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Feditorial.designtaxi.com%2Fimages%2FKitKat-US-Logo-1-1723703502.jpeg&f=1&nofb=1&ipt=d7a2ee5dbcc8404c80e032572e963d6e2f18f87b923becd4b2f370de051bf318', 7);
 
 -- --------------------------------------------------------
 
@@ -120,7 +116,6 @@ INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `epc`,
 -- Table structure for table `receipts`
 --
 
-DROP TABLE IF EXISTS `receipts`;
 CREATE TABLE `receipts` (
   `receipt_id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
@@ -131,13 +126,21 @@ CREATE TABLE `receipts` (
   `status` varchar(20) DEFAULT 'completed'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
+--
+-- Dumping data for table `receipts`
+--
+
+INSERT INTO `receipts` (`receipt_id`, `customer_id`, `total`, `points_earned`, `created_at`, `payment_method`, `status`) VALUES
+(1, 1, 4.00, 4, '2026-04-15 21:34:23', 'SIMULATION', 'completed'),
+(2, 1, 4.00, 4, '2026-04-15 21:35:47', 'SIMULATION', 'completed'),
+(3, 26, 4.00, 4, '2026-04-15 21:54:45', 'SIMULATION', 'completed');
+
 -- --------------------------------------------------------
 
 --
 -- Table structure for table `receipt_items`
 --
 
-DROP TABLE IF EXISTS `receipt_items`;
 CREATE TABLE `receipt_items` (
   `item_id` int(11) NOT NULL,
   `receipt_id` int(11) DEFAULT NULL,
@@ -147,13 +150,21 @@ CREATE TABLE `receipt_items` (
   `subtotal` decimal(10,2) GENERATED ALWAYS AS (`quantity` * `price`) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
+--
+-- Dumping data for table `receipt_items`
+--
+
+INSERT INTO `receipt_items` (`item_id`, `receipt_id`, `product_id`, `quantity`, `price`) VALUES
+(1, 1, 1, 1, 4.00),
+(2, 2, 1, 1, 4.00),
+(3, 3, 1, 1, 4.00);
+
 -- --------------------------------------------------------
 
 --
 -- Table structure for table `receptions`
 --
 
-DROP TABLE IF EXISTS `receptions`;
 CREATE TABLE `receptions` (
   `reception_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
@@ -168,7 +179,6 @@ CREATE TABLE `receptions` (
 -- Table structure for table `thresholds`
 --
 
-DROP TABLE IF EXISTS `thresholds`;
 CREATE TABLE `thresholds` (
   `id` int(11) NOT NULL,
   `fridge_name` varchar(50) DEFAULT NULL,
@@ -210,8 +220,7 @@ ALTER TABLE `admins`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`customer_id`),
-  ADD UNIQUE KEY `email` (`email`),
-  ADD UNIQUE KEY `membership_number` (`membership_number`);
+  ADD UNIQUE KEY `email` (`email`);
 
 --
 -- Indexes for table `inventory`
@@ -270,7 +279,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `inventory`
@@ -282,19 +291,19 @@ ALTER TABLE `inventory`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `receipts`
 --
 ALTER TABLE `receipts`
-  MODIFY `receipt_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `receipt_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `receipt_items`
 --
 ALTER TABLE `receipt_items`
-  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `receptions`
