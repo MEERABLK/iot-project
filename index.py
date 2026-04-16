@@ -210,12 +210,12 @@ def register():
     if request.method == 'POST':
 
         # Capture form data from the register page
-        name = request.form.get('name')
+        username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
         
         # Here you would call your database function to save the user
-        # data.add_user(name, email, password)
+        data.add_user(username, email, password)
         
         print(f"Registering new user: {email}")
         flash("Registration successful! Please login.", "success")
