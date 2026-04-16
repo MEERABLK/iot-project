@@ -182,7 +182,7 @@ def get_product_by_upc(upc):
     return result
 
 # checkout function
-def create_receipt(customer_id, cart):
+def create_receipt(customer_id, cart, discount_percent=0.0):
     try:
         db = mysql.connector.connect(
             host=db_host,
@@ -192,8 +192,8 @@ def create_receipt(customer_id, cart):
         )
         cursor = db.cursor()
 
-        total = sum(item['price'] * item['qty'] for item in cart.values())
-        points = int(total)  # simple system
+        # Calculate totals
+        raw_total = sum(item['price'] * item['qty'] for item in cart.values())
         final_total = raw_total * (1 - discount_percent)
         
         # Define the variable clearly here
