@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 16, 2026 at 02:02 AM
+-- Generation Time: Apr 16, 2026 at 02:08 AM
 -- Server version: 11.8.3-MariaDB-0+deb13u1 from Debian
 -- PHP Version: 8.4.16
 
@@ -66,19 +66,6 @@ INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `pho
 (18, 'gd', 'dg', 'juko@gmail.com', 'das', 'asd', 'asd', 'ads', 'das', '2026-02-26 04:47:55', 0, '', NULL),
 (19, 'df', 'sdf', 'meerab@gmai.com', '5146789900', '456 Boulevard Nac', 'Manitoba', 'dsf', 'H5N2O9', '2026-02-26 05:19:10', 0, '', NULL),
 (26, NULL, NULL, 'lowkeymischievous@gmail.com', NULL, NULL, NULL, NULL, NULL, '2026-04-16 01:21:17', 4, 'pokemone1', '2388387');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `inventory`
---
-
-CREATE TABLE `inventory` (
-  `inventory_id` int(11) NOT NULL,
-  `product_id` int(11) DEFAULT NULL,
-  `quantity` int(11) DEFAULT 0,
-  `last_updated` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -223,13 +210,6 @@ ALTER TABLE `customers`
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `inventory`
---
-ALTER TABLE `inventory`
-  ADD PRIMARY KEY (`inventory_id`),
-  ADD UNIQUE KEY `unique_product` (`product_id`);
-
---
 -- Indexes for table `products`
 --
 ALTER TABLE `products`
@@ -282,12 +262,6 @@ ALTER TABLE `customers`
   MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
--- AUTO_INCREMENT for table `inventory`
---
-ALTER TABLE `inventory`
-  MODIFY `inventory_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
@@ -320,12 +294,6 @@ ALTER TABLE `thresholds`
 --
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `inventory`
---
-ALTER TABLE `inventory`
-  ADD CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
 
 --
 -- Constraints for table `receipts`
