@@ -434,6 +434,25 @@ def get_product_by_epc(epc):
 
     return result
 
+## Phase 2 products upc
+def get_product_by_epc(upc):
+    mydb = mysql.connector.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database="smartstoreiotproject_db"
+    )
+
+    cursor = mydb.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM products WHERE UPC = %s", (upc,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    mydb.close()
+
+    return result
+
 # checkout function
 def create_receipt(customer_id, cart):
     try:
