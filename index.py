@@ -206,13 +206,18 @@ def login():
 @app.route('/client/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        # 1. Capture only the required fields
-        first_name = request.form.get('name') # or 'first_name' depending on your HTML
+
+        # Capture form data from the register page
+        username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # 2. Call the function (optional fields will automatically be None)
-        success = data.add_customer(first_name, email, password)
+        # Here you would call your database function to save the user
+        data.add_user(username, email, password)
+        
+        print(f"Registering new user: {email}")
+        flash("Registration successful! Please login.", "success")
+        return redirect(url_for('login'))
         
         if success:
             flash("Registration successful! Please login.", "success")
