@@ -33,6 +33,12 @@ h3 {
     color: #d4a669;
 }
 
+.collection > h1,
+.collection > h2,
+.collection > h3 {
+    color: white;
+}
+
 a {
     color: white;
     text-decoration-line: none;
