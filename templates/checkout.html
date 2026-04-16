@@ -1,0 +1,142 @@
+{% extends "components/base.html" %}
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<style>
+    /* Force the table to act like a table, not a flex container */
+    table.collection {
+        display: table !important;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    thead, tbody, tfoot {
+        display: table-row-group; /* Reset any flex behavior */
+    }
+
+    tr {
+        display: table-row !important;
+    }
+
+    th, td {
+        display: table-cell !important;
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+    }
+
+    /* Right-align price and subtotal for better readability */
+    td:nth-child(2), td:nth-child(4), th:nth-child(2), th:nth-child(4) {
+        text-align: right;
+    }
+</style>
+<div class="container">
+    <h2>Your Cart</h2>
+
+    <table class="collection collection-shade-1">
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody id="cart-table-body">
+            </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="3" style="text-align:right">Total:</th>
+                <th id="cart-total">$0.00</th>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <div style="margin-top: 20px;" id="checkout-section">
+        <input type="email" id="customer-email" 
+        placeholder="Enter email for receipt" 
+        class="input" 
+        style="margin-bottom: 10px; display: block;"
+        value="{{ session.get('user_email', '') }}">       
+        <button onclick="processCheckout()" id="checkout-btn" class="button">Complete Purchase</button>
+    </div>
+</div>
+
+<script>
+    async function updateCartDisplay() {
+        try {
+            const response = await fetch('/api/cart');
+            const cart = await response.json();
+            const tbody = document.getElementById('cart-table-body');
+            const totalDisplay = document.getElementById('cart-total');
+            
+            tbody.innerHTML = ''; // Clear existing rows
+            let grandTotal = 0;
+
+            if (cart.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">Your cart is empty. Scan items to begin!</td></tr>';
+            } else {
+                cart.forEach(item => {
+                    grandTotal += item.subtotal;
+                    const row = `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td style="text-align: right;">$${item.price.toFixed(2)}</td>
+                            <td style="text-align: center;">${item.qty}</td>
+                            <td style="text-align: right;">$${item.subtotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+            
+            totalDisplay.innerText = `$${grandTotal.toFixed(2)}`;
+        } catch (error) {
+            console.error("Error fetching cart:", error);
+        }
+    }
+
+    // Refresh the cart every 2 seconds to show RFID/Barcode updates live
+    setInterval(updateCartDisplay, 3000);
+    
+    // Initial load
+    updateCartDisplay();
+
+    async function processCheckout() {
+        const email = document.getElementById('customer-email').value;
+        const btn = document.getElementById('checkout-btn');
+
+        if (!confirm("Are you sure you want to finalize your purchase?")) return;
+
+        // Disable button to prevent double-charging
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        try {
+            const response = await fetch('/api/complete-purchase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    customer_id: 1, // You can replace this with a real user ID if logged in
+                    email: email 
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === "success") {
+                alert(`Success! Receipt #${result.receipt_id} has been generated.`);
+                window.location.href = "/"; // Redirect to home or a success page
+            } else {
+                alert("Error: " + result.message);
+                btn.disabled = false;
+                btn.innerText = "Complete Purchase";
+            }
+        } catch (error) {
+            console.error("Checkout failed:", error);
+            alert("A system error occurred.");
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

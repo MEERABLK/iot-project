@@ -1,7 +1,7 @@
 # index.py
 import os
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_socketio import SocketIO
 
 from scripts.controller import Controller
@@ -175,16 +175,29 @@ def client_default():
 @app.route('/client/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Capture form data
+        # 1. Capture form data
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # Here you would call your database function to verify the user
-        # user = data.verify_user(email, password)
+        # 2. Call your new database function
+        # (Assuming 'data' is your import for db.database)
+        user = data.verify_user(email, password)
         
-        print(f"Login attempt for: {email}")
-        flash("Login successful!", "success")
-        return redirect(url_for('checkout')) # Redirect to store after login
+        if user:
+            # 3. Success! Store user info in the session
+            # We use 'customer_id' and 'email' based on your DB schema
+            session['user_id'] = user.get('customer_id')
+            session['user_email'] = user.get('email')
+            session['user_name'] = user.get('name')
+            
+            print(f"Login successful for: {email}")
+            flash(f"Welcome back, {user.get('name')}!", "success")
+            return redirect(url_for('checkout')) 
+        else:
+            # 4. Failure! Stay on login page and show error
+            print(f"Login failed for: {email}")
+            flash("Invalid email or password. Please try again.", "danger")
+            return redirect(url_for('login'))
         
     return render_template('client_login.html')
 # def login():
@@ -215,6 +228,56 @@ def register():
 # if __name__ == '__main__':
 #     import threading
 
+@app.route('/client/logout')
+def logout():
+    session.clear() # Removes user_id, user_email, etc.
+    flash("You have been logged out.", "info")
+    return redirect(url_for('login'))
+
+@app.route('/api/cart')
+def get_current_cart():
+    # Retrieve the cart dictionary from the controller
+    cart_data = controller.get_cart()
+    
+    # Transform it into a list that is easier for JavaScript to loop through
+    formatted_cart = []
+    for product_id, info in cart_data.items():
+        formatted_cart.append({
+            "id": product_id,
+            "name": info['name'],
+            "price": info['price'],
+            "qty": info['qty'],
+            "subtotal": info['price'] * info['qty']
+        })
+    
+    return jsonify(formatted_cart)
+
+@app.route('/api/complete-purchase', methods=['POST'])
+def complete_purchase():
+    try:
+        data_req = request.get_json()
+        customer_id = data_req.get('customer_id', 1) # Default to 1 for guest
+        customer_email = data_req.get('email')
+
+        # 1. Generate and Store the receipt internally
+        receipt = controller.get_receipt(customer_id)
+        
+        if not receipt:
+            return jsonify({"status": "error", "message": "Cart is empty"}), 400
+
+        # 2. Send the email if an email was provided
+        if customer_email:
+            controller.send_receipt(customer_email)
+
+        return jsonify({
+            "status": "success", 
+            "message": "Purchase completed!",
+            "receipt_id": receipt['receipt_id']
+        })
+
+    except Exception as e:
+        print(f"❌ Checkout Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     
 #     # Start controller in background thread
 #     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
