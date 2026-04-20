@@ -40,6 +40,7 @@ class Controller:
 
         # 🛰️ RFID & Cart Logic
         self.rfid_tags = []         # Current tags physically on the scanner
+        self.unkown_tags = [] # unknown tags to be used for adding epcs to the database
         self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
         self.cart = {}              # Stores product info and quantities
         self.carts = {}             # For historical or multiple cart tracking
@@ -80,10 +81,6 @@ class Controller:
 
     #===core logic===
     def _handle_tag(self, tag_epc):
-        """
-        Retrieves product data and updates the cart. 
-        Includes error handling for unknown tags and database issues.
-        """
         try:
             # 1. Fetch product from database
             product = database.get_product_by_epc(tag_epc)
@@ -91,7 +88,13 @@ class Controller:
             # 2. Check if the tag exists in the database
             if not product:
                 print(f"⚠️ Unknown tag detected: {tag_epc}")
-                # You can return a custom error dict to help the UI display an alert
+                
+                # STORE UNKNOWN TAGS SEPARATELY 👈
+                with self.lock:
+                    if tag_epc not in self.unknown_tags:
+                        self.unknown_tags.append(tag_epc)
+                        print(f"📥 Tag {tag_epc} added to discovery list.")
+                
                 return {"error": "unknown_tag", "epc": tag_epc}
 
             # 3. Safe data extraction
@@ -100,35 +103,39 @@ class Controller:
             price = float(product.get('price', 0.0))
 
             # 4. Update internal cart
-            if pid in self.cart:
-                self.cart[pid]['qty'] += 1
-            else:
-                self.cart[pid] = {
-                    "name": name,
-                    "price": price,
-                    "qty": 1,
-                    "category": product.get('category', 'General'),
-                    "source": "rfid",  # 👈 New flag
-                    "producer": product.get('producer', 'Unknown')
-                }
+            with self.lock:
+                if pid in self.cart:
+                    self.cart[pid]['qty'] += 1
+                else:
+                    self.cart[pid] = {
+                        "name": name,
+                        "price": price,
+                        "qty": 1,
+                        "category": product.get('category', 'General'),
+                        "source": "rfid",
+                        "producer": product.get('producer', 'Unknown')
+                    }
 
-            print(f"✅ Item added: {name} (${price})")
+            # 5. PRINT CART LIVE
+            print(f"\n✅ ITEM ADDED: {name} - ${price:.2f}")
+            
+            total = sum(item['price'] * item['qty'] for item in self.cart.values())
+            print(f"💰 TOTAL: ${total:.2f}\n")
+            
             return product
 
         except Exception as e:
-            # 5. Handle unexpected errors (e.g., Database connection loss)
             print(f"🚨 Error processing tag {tag_epc}: {str(e)}")
             return {"error": "system_error", "message": str(e)}
+        
+    def get_unknown_tags(self):
+        """Returns the list of detected but unregistered tags."""
+        return self.unknown_tags
 
-    # PRINT CART LIVE
-        print("\n ITEM ADDED")
-        print(f"{product['name']} - ${product['price']}")
-
-        total = 0
-        for item in self.cart.values():
-            total += item['price'] * item['qty']
-
-        print(f"💰 TOTAL: {total}\n")
+    def clear_unknown_tags(self):
+        """Clears the list after you've handled/registered them."""
+        with self.lock:
+            self.unknown_tags = []
 
     def get_receipt(self, customer_id):
         """
