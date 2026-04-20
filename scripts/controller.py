@@ -82,27 +82,30 @@ class Controller:
     #===core logic===
     def _handle_tag(self, tag_epc):
         try:
-            # 1. Fetch product from database
-            product = database.get_product_by_epc(tag_epc)
+            # 1. Use the new JOINed lookup
+            product = database.get_product_by_tag_epc(tag_epc)
 
-            # 2. Check if the tag exists in the database
             if not product:
-                print(f"⚠️ Unknown tag detected: {tag_epc}")
-                
-                # STORE UNKNOWN TAGS SEPARATELY 👈
+                print(f"⚠️ Unregistered tag detected: {tag_epc}")
                 with self.lock:
                     if tag_epc not in self.unknown_tags:
                         self.unknown_tags.append(tag_epc)
-                        print(f"📥 Tag {tag_epc} added to discovery list.")
-                
                 return {"error": "unknown_tag", "epc": tag_epc}
 
-            # 3. Safe data extraction
-            pid = product.get('product_id')
-            name = product.get('name', 'Unknown Product')
-            price = float(product.get('price', 0.0))
+            # 2. Prevent Double-Scanning of the same physical item 
+            # (Assuming you have self.scanned_epcs = set() in __init__)
+            with self.lock:
+                if tag_epc in self.scanned_epcs:
+                    print(f"ℹ️ Tag {tag_epc} already in cart. Skipping.")
+                    return None
+                
+                self.scanned_epcs.add(tag_epc)
 
-            # 4. Update internal cart
+            # 3. Add to cart based on Product ID
+            pid = product.get('product_id')
+            name = product.get('name')
+            price = float(product.get('price'))
+
             with self.lock:
                 if pid in self.cart:
                     self.cart[pid]['qty'] += 1
@@ -111,22 +114,15 @@ class Controller:
                         "name": name,
                         "price": price,
                         "qty": 1,
-                        "category": product.get('category', 'General'),
-                        "source": "rfid",
-                        "producer": product.get('producer', 'Unknown')
+                        "upc": product.get('upc')
                     }
 
-            # 5. PRINT CART LIVE
-            print(f"\n✅ ITEM ADDED: {name} - ${price:.2f}")
-            
-            total = sum(item['price'] * item['qty'] for item in self.cart.values())
-            print(f"💰 TOTAL: ${total:.2f}\n")
-            
+            print(f"✅ Scanned {name} (${price})")
             return product
 
         except Exception as e:
-            print(f"🚨 Error processing tag {tag_epc}: {str(e)}")
-            return {"error": "system_error", "message": str(e)}
+            print(f"🚨 Error: {e}")
+            return None
         
     def get_unknown_tags(self):
         """Returns the list of detected but unregistered tags."""
@@ -338,6 +334,9 @@ class Controller:
                 if hasattr(self, 'socketio'):
                     self.socketio.emit('cart_updated', {'cart': {}, 'total': 0})
                 
+                with self.lock:
+                    self.cart = {}
+                    self.scanned_epcs.clear() # 👈 Clear physical tag history
                 print(f"✅ Controller: Checkout finalized for Receipt #{receipt_id}")
                 return receipt_id
             else:

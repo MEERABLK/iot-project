@@ -712,3 +712,44 @@ def verify_user(email, password):
     conn.close()
 
     return user
+
+def add_rfid_tag(epc, upc):
+    """
+    Links a specific physical RFID tag (EPC) to a product type (UPC).
+    """
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        cursor = mydb.cursor()
+
+        # 1. Verification: Does this UPC actually exist in our products table?
+        cursor.execute("SELECT product_id FROM products WHERE upc = %s", (upc,))
+        if not cursor.fetchone():
+            print(f"⚠️ Cannot add tag: UPC {upc} does not exist in product database.")
+            return False
+
+        # 2. Insert the new EPC mapping
+        # We use IGNORE or a check to prevent duplicate EPCs if scanned twice
+        sql = "INSERT INTO rfid_tags (epc, upc) VALUES (%s, %s)"
+        values = (epc, upc)
+
+        cursor.execute(sql, values)
+        mydb.commit()
+
+        cursor.close()
+        mydb.close()
+        
+        print(f"✅ EPC {epc} successfully linked to UPC {upc}")
+        return True
+
+    except mysql.connector.Error as err:
+        if err.errno == 1062: # Duplicate entry error
+            print(f"ℹ️ Tag {epc} is already registered.")
+        else:
+            print(f"🚨 Database Error: {err}")
+        return False
+    
