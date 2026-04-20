@@ -26,11 +26,11 @@ def on_message(client, userdata, msg):
    # print(f"{msg.topic} -> {payload}")
   
     if msg.topic == "esp32/temperature":
-     data.fridge1Temperature = float(payload)  # assign to fridge1 temp for testing
+        data.fridge1Temperature = float(payload)  # assign to fridge1 temp for testing
     elif msg.topic == "esp32/humidity":
-     data.fridge1Humidity = float(payload)
+        data.fridge1Humidity = float(payload)
     elif msg.topic == "vanier":
-    #  print(payload)
+        print(payload)
 
 client = mqtt.Client()
 client.on_connect = on_connect

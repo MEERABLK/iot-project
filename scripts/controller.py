@@ -48,7 +48,7 @@ class Controller:
 
     def start(self):
         # Start MQTT listener
-        # start_mqtt()
+        start_mqtt()
 
         # Start background logic (alerts, GPIO, etc.)
         threading.Thread(target=self._background_tasks, daemon=True).start()
