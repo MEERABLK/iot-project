@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 20, 2026 at 02:35 PM
+-- Generation Time: Apr 20, 2026 at 02:42 PM
 -- Server version: 11.8.6-MariaDB-0+deb13u1 from Debian
 -- PHP Version: 8.4.16
 
@@ -108,26 +108,24 @@ CREATE TABLE IF NOT EXISTS `products` (
   `category` varchar(50) DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
   `upc` varchar(13) DEFAULT NULL,
-  `epc` varchar(24) DEFAULT NULL,
   `producer` varchar(100) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
   `quantity` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`product_id`),
-  UNIQUE KEY `upc` (`upc`),
-  UNIQUE KEY `epc` (`epc`)
+  UNIQUE KEY `upc` (`upc`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `epc`, `producer`, `image`, `quantity`) VALUES
-(1, 'Milk 1L', 'Dairy', 4.00, '9876543210123', 'A00000000000000000004938', 'Dairy', '', 0),
-(2, 'Coke', 'sodas', 10.00, '9568947695', 'A00000000000000000004958', 'Coke', '', 150),
-(3, 'Hat', 'Clothing', 15.00, '123456789012', 'A00000000000000000004956', 'Nike', '', 10),
-(4, 'Pants', 'Clothing', 25.00, '495749574957', 'A00000000000000000004957', 'Adidas', '', 10),
-(5, 'Shirt', 'Clothing', 25.00, '493049304930', 'A00000000000000000004930', 'Clothing co.', 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.S6n6N2vjxrOqOxtUzjolHAHaHa%3Fpid%3DApi&f=1&ipt=9b5ad7ba08fdbdd2ab0e69df75df7734eb621372e89b74077f424d83f0307276&ipo=images', 20),
-(6, 'Gloves', 'Clothing', 5.00, '123412341234', '123412341234', 'Glove co', '', 15);
+INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `producer`, `image`, `quantity`) VALUES
+(1, 'Milk 1L', 'Dairy', 4.00, '9876543210123', 'Dairy', '', 0),
+(2, 'Coke', 'sodas', 10.00, '9568947695', 'Coke', '', 150),
+(3, 'Hat', 'Clothing', 15.00, '123456789012', 'Nike', '', 10),
+(4, 'Pants', 'Clothing', 25.00, '495749574957', 'Adidas', '', 10),
+(5, 'Shirt', 'Clothing', 25.00, '493049304930', 'Clothing co.', 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.S6n6N2vjxrOqOxtUzjolHAHaHa%3Fpid%3DApi&f=1&ipt=9b5ad7ba08fdbdd2ab0e69df75df7734eb621372e89b74077f424d83f0307276&ipo=images', 20),
+(6, 'Gloves', 'Clothing', 5.00, '123412341234', 'Glove co', '', 15);
 
 -- --------------------------------------------------------
 
