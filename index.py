@@ -23,7 +23,7 @@ def toggle_off(id):
 
 controller = Controller(toggle_on, toggle_off)
 
-load_dotenv("credentials.env")
+load_dotenv(".env")
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
