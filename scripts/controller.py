@@ -10,7 +10,7 @@ import os
 from db import database
 from scripts.rfid_reader import get_rfid_tags
 
-load_dotenv("credentials.env")
+load_dotenv(".env")
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")

@@ -23,7 +23,7 @@ def toggle_off(id):
 
 controller = Controller(toggle_on, toggle_off)
 
-load_dotenv("credentials.env")
+load_dotenv(".env")
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -315,6 +315,24 @@ def get_user_info():
 #         threading.Thread(target=controller.start, daemon=True).start()
     
 #     socketio.run(app, debug=True)
+
+@app.route('/products/<int:id>/assign-tags', methods=['POST'])
+def assign_tags(id):
+    tags = controller.get_unknown_tags()
+    if not tags:
+        return jsonify({"error": "No tags detected"}), 400
+
+    # Get the UPC for the product selected in the Admin Panel
+    product = data.get_product_by_id(id)
+    upc = product.get('upc')
+
+    # Register the unique physical tag
+    success = data.add_rfid_tag(tags[0], upc)
+    
+    if success:
+        controller.clear_unknown_tags()
+        return jsonify({"status": "success"})
+    return jsonify({"error": "Failed to link tag"}), 500
 
 if __name__ == '__main__':
     import threading
