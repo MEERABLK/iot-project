@@ -273,33 +273,41 @@ def get_all_products():
 
     return results    
 
-def add_product(name, category, price, upc, epc, producer, quantity, image):
+def add_product(name, category, price, upc_code, epc, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT INTO products (name, category, price, upc, epc, producer, quantity, image)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-""", (name, category, price, upc, epc, producer, quantity, image))
+    try:
+        # 1. Insert into products (NO UPC/EPC HERE)
+        cursor.execute("""
+            INSERT INTO products (name, category, price, producer, image)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (name, category, price, producer, image))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        product_id = cursor.lastrowid  # 👈 IMPORTANT
 
-def delete_product(product_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-# database.py
-import mysql.connector
-from dotenv import load_dotenv
-import os
-load_dotenv()  # loads variables from .env
+        # 2. Insert UPC (barcode + quantity)
+        cursor.execute("""
+            INSERT INTO product_upc (product_id, upc_code, quantity)
+            VALUES (%s, %s, %s)
+        """, (product_id, upc_code, quantity))
 
-# from db.database import get_connection
+        # 3. Insert RFID (EPC = one item)
+        if epc:
+            cursor.execute("""
+                INSERT INTO product_rfid (product_id, epc_code)
+                VALUES (%s, %s)
+            """, (product_id, epc))
 
-db_host = os.getenv("DB_HOST")
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
+        conn.commit()
+
+    except Exception as e:
+        print("❌ Add product error:", e)
+        conn.rollback()
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def get_connection():
@@ -398,60 +406,56 @@ def add_customer(first, last, email, phone, address, city, province, postal_code
 
 ## Phase 2 products epc
 def get_product_by_epc(epc):
-    mydb = mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
 
-    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT p.* 
+        FROM products p
+        JOIN product_rfid r ON p.product_id = r.product_id
+        WHERE r.epc_code = %s
+    """, (epc,))
 
-    cursor.execute("SELECT * FROM products WHERE EPC = %s", (epc,))
     result = cursor.fetchone()
 
     cursor.close()
-    mydb.close()
+    conn.close()
 
     return result
 
 ## Phase 2 products upc
-def get_product_by_upc(upc):
-    mydb = mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
+def get_product_by_upc(upc_code):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
 
-    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT p.*, u.quantity
+        FROM products p
+        JOIN product_upc u ON p.product_id = u.product_id
+        WHERE u.upc_code = %s
+    """, (upc_code,))
 
-    cursor.execute("SELECT * FROM products WHERE UPC = %s", (upc,))
     result = cursor.fetchone()
 
     cursor.close()
-    mydb.close()
+    conn.close()
 
     return result
 
 #inventory update 
 def reduce_stock(product_id, qty):
-    db = mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
-    cursor = db.cursor()
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    cursor.execute(
-        "UPDATE inventory SET quantity = quantity - %s WHERE product_id = %s",
-        (qty, product_id)
-    )
+    cursor.execute("""
+        UPDATE product_upc
+        SET quantity = quantity - %s
+        WHERE product_id = %s
+    """, (qty, product_id))
 
-    db.commit()
+    conn.commit()
     cursor.close()
-    db.close()
+    conn.close()
 
 def get_all_products():
     conn = get_connection()
@@ -465,18 +469,7 @@ def get_all_products():
 
     return results    
 
-def add_product(name, category, price, upc, epc, producer, quantity, image):
-    conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT INTO products (name, category, price, upc, epc, producer, quantity, image)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-""", (name, category, price, upc, epc, producer, quantity, image))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
 
 def delete_product(product_id):
     conn = get_connection()
@@ -618,71 +611,68 @@ def get_all_products():
 
     return results    
 
-def add_product(name, category, price, upc, epc, producer, quantity, image):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    INSERT INTO products (name, category, price, upc, epc, producer, quantity, image)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-""", (name, category, price, upc, epc, producer, quantity, image))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
 
 def delete_product(product_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "DELETE FROM products WHERE product_id = %s",
-        (product_id,)
-    )
+    try:
+        # 🔥 DELETE ALL DEPENDENCIES FIRST
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        cursor.execute("DELETE FROM receipt_items WHERE product_id = %s", (product_id,))
+        cursor.execute("DELETE FROM product_rfid WHERE product_id = %s", (product_id,))
+        cursor.execute("DELETE FROM product_upc WHERE product_id = %s", (product_id,))
 
-def update_product(id, name, category, price, upc, epc, producer, quantity, image):
+        # THEN delete product
+        cursor.execute("DELETE FROM products WHERE product_id = %s", (product_id,))
+
+        conn.commit()
+
+    except Exception as e:
+        print("❌ Delete error:", e)
+        conn.rollback()
+
+    finally:
+        cursor.close()
+        conn.close()
+
+def update_product(id, name, category, price, upc_code, epc, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE products 
-        SET name=%s, category=%s, price=%s, upc=%s, epc=%s, quantity=%s, producer=%s, image=%s
-        WHERE product_id=%s
-    """, (name, category, price, upc, epc, quantity, producer, image, id))
+    try:
+        # update main product
+        cursor.execute("""
+            UPDATE products
+            SET name=%s, category=%s, price=%s, producer=%s, image=%s
+            WHERE product_id=%s
+        """, (name, category, price, producer, image, id))
 
-    
+        # update UPC
+        cursor.execute("""
+            UPDATE product_upc
+            SET upc_code=%s, quantity=%s
+            WHERE product_id=%s
+        """, (upc_code, quantity, id))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
-    cursor.execute(
-        "DELETE FROM products WHERE product_id = %s",
-        (product_id,)
-    )
+        # update EPC (only if needed)
+        if epc:
+            cursor.execute("""
+                UPDATE product_rfid
+                SET epc_code=%s
+                WHERE product_id=%s
+                LIMIT 1
+            """, (epc, id))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
 
-def update_product(id, name, category, price, upc, epc, producer, quantity, image):
-    conn = get_connection()
-    cursor = conn.cursor()
+    except Exception as e:
+        print(" Update error:", e)
+        conn.rollback()
 
-    cursor.execute("""
-        UPDATE products 
-        SET name=%s, category=%s, price=%s, upc=%s, epc=%s, quantity=%s, producer=%s, image=%s
-        WHERE product_id=%s
-    """, (name, category, price, upc, epc, quantity, producer, image, id))
-
-    
-
-    conn.commit()
-    cursor.close()
-    conn.close()
+    finally:
+        cursor.close()
+        conn.close()
 
 def add_user(name, email, password):
     conn = get_connection()
