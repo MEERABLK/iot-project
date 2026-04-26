@@ -1,3 +1,3 @@
-DB_HOST=localhost
-DB_USER=csuser
-DB_PASSWORD=yourpassword
+DB_HOST= localhost
+DB_USER= root
+DB_PASSWORD= password
