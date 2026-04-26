@@ -40,6 +40,9 @@ class Controller:
 
         # 🛰️ RFID & Cart Logic
         self.rfid_tags = []         # Current tags physically on the scanner
+        # Scanned EPCs
+        self.scanned_epcs = set()
+        self.unknown_tags = [] # unknown tags to be used for adding epcs to the database
         self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
         self.cart = {}              # Stores product info and quantities
         self.carts = {}             # For historical or multiple cart tracking
@@ -47,7 +50,7 @@ class Controller:
 
     def start(self):
         # Start MQTT listener
-        # start_mqtt()
+        start_mqtt()
 
         # Start background logic (alerts, GPIO, etc.)
         threading.Thread(target=self._background_tasks, daemon=True).start()
@@ -60,75 +63,96 @@ class Controller:
     def _rfid_background_task(self):
         """Syncs the controller state and the cart with the physical scanner."""
         for current_tags in get_rfid_tags():
-            # Update the list for the UI display
             with self.lock:
                 self.rfid_tags = current_tags
 
-            # 1. ADDITION: Handle newly detected tags
+            # 1. Handle newly detected tags
             for tag_epc in current_tags:
                 if tag_epc not in self.cart_check_list:
-                    self._handle_tag(tag_epc)
-                    self.cart_check_list.add(tag_epc)
+                    # Capture the result of the handle_tag call
+                    result = self._handle_tag(tag_epc)
+                    
+                    # ONLY add to the check_list if it's a valid product
+                    # If it returns an error dict (unknown_tag), don't block it here
+                    if result and "error" not in result:
+                        self.cart_check_list.add(tag_epc)
+                    else:
+                        # Log that it's being ignored for now or handled as unknown
+                        print(f"DEBUG: Tag {tag_epc} is unknown/invalid. Not adding to checklist.")
 
             # 2. REMOVAL: Handle tags no longer on the scanner
             for tag_epc in list(self.cart_check_list):
                 if tag_epc not in current_tags:
-                    # Remove from the cart tracking and the check list
                     self._handle_removal(tag_epc) 
                     self.cart_check_list.remove(tag_epc)
                     print(f"🗑️ Tag {tag_epc} removed from scanner & cart")
 
     #===core logic===
     def _handle_tag(self, tag_epc):
-        """
-        Retrieves product data and updates the cart. 
-        Includes error handling for unknown tags and database issues.
-        """
         try:
-            # 1. Fetch product from database
-            product = database.get_product_by_epc(tag_epc)
+            # 1. Safety check for the database attribute and perform lookup
+            # This prevents the "module has no attribute" crash
+            product = None
+            if hasattr(database, 'get_product_by_epc'):
+                product = database.get_product_by_epc(tag_epc)
+            else:
+                print("🚨 Error: database.py is missing 'get_product_by_epc' function!")
+                return None
 
-            # 2. Check if the tag exists in the database
+            # 2. Handle Unregistered Tags
             if not product:
-                print(f"⚠️ Unknown tag detected: {tag_epc}")
-                # You can return a custom error dict to help the UI display an alert
+                print(f"⚠️ Unregistered tag detected: {tag_epc}")
+                with self.lock:
+                    if tag_epc not in self.unknown_tags:
+                        self.unknown_tags.append(tag_epc)
+                        # Trigger a SocketIO emit here if you want the Admin UI 
+                        # to update the list of unknown tags in real-time.
                 return {"error": "unknown_tag", "epc": tag_epc}
 
-            # 3. Safe data extraction
+            # 3. Prevent Double-Scanning of the same physical item
+            # Note: Ensure self.scanned_epcs = set() is in your __init__
+            with self.lock:
+                if not hasattr(self, 'scanned_epcs'):
+                    self.scanned_epcs = set()
+                    
+                if tag_epc in self.scanned_epcs:
+                    # We return a dummy dict so the background task knows 
+                    # this tag is "known" and shouldn't be added to unknown_tags
+                    return {"status": "already_scanned"}
+                
+                self.scanned_epcs.add(tag_epc)
+
+            # 4. Add to cart based on Product data
             pid = product.get('product_id')
-            name = product.get('name', 'Unknown Product')
+            name = product.get('name', 'Unknown Item')
             price = float(product.get('price', 0.0))
 
-            # 4. Update internal cart
-            if pid in self.cart:
-                self.cart[pid]['qty'] += 1
-            else:
-                self.cart[pid] = {
-                    "name": name,
-                    "price": price,
-                    "qty": 1,
-                    "category": product.get('category', 'General'),
-                    "source": "rfid",  # 👈 New flag
-                    "producer": product.get('producer', 'Unknown')
-                }
+            with self.lock:
+                if pid in self.cart:
+                    self.cart[pid]['qty'] += 1
+                else:
+                    self.cart[pid] = {
+                        "name": name,
+                        "price": price,
+                        "qty": 1,
+                        "upc": product.get('upc')
+                    }
 
-            print(f"✅ Item added: {name} (${price})")
+            print(f"✅ Scanned {name} (${price})")
             return product
 
         except Exception as e:
-            # 5. Handle unexpected errors (e.g., Database connection loss)
-            print(f"🚨 Error processing tag {tag_epc}: {str(e)}")
-            return {"error": "system_error", "message": str(e)}
+            print(f"🚨 Handle Tag Exception: {e}")
+            return None
+        
+    def get_unknown_tags(self):
+        """Returns the list of detected but unregistered tags."""
+        return self.unknown_tags
 
-    # PRINT CART LIVE
-        print("\n ITEM ADDED")
-        print(f"{product['name']} - ${product['price']}")
-
-        total = 0
-        for item in self.cart.values():
-            total += item['price'] * item['qty']
-
-        print(f"💰 TOTAL: {total}\n")
+    def clear_unknown_tags(self):
+        """Clears the list after you've handled/registered them."""
+        with self.lock:
+            self.unknown_tags = []
 
     def get_receipt(self, customer_id):
         """
@@ -331,6 +355,9 @@ class Controller:
                 if hasattr(self, 'socketio'):
                     self.socketio.emit('cart_updated', {'cart': {}, 'total': 0})
                 
+                with self.lock:
+                    self.cart = {}
+                    self.scanned_epcs.clear() # 👈 Clear physical tag history
                 print(f"✅ Controller: Checkout finalized for Receipt #{receipt_id}")
                 return receipt_id
             else:
@@ -339,22 +366,6 @@ class Controller:
         except Exception as e:
             print(f"🚨 Controller Error during checkout: {e}")
             return None
-           
-    # def _background_tasks(self):
-    #     while True:
-    #         # Example: control GPIO based on temperature
-    #         if self.data.fridge1Temperature is not None:
-    #             if self.data.fridge1Temperature > 8:
-    #                 # send alert
-    #                 send_email.send_email(
-    #                     subject="Fridge Alert 🚨",
-    #                     body=f"Temp too high: {self.data.fridge1Temperature}. Would you like to turn on the fan?",
-    #                     sender=EMAIL_ADDRESS,
-    #                     recipients=[""],
-    #                     password=EMAIL_PASSWORD
-    #                 )
-
-    #         time.sleep(5)
 
     def get_cart(self):
         return self.cart
@@ -385,7 +396,7 @@ class Controller:
                         subject="Fridge Alert 🚨",
                         body=f"The following temperatures are too high:\n\n{message}\nReply YES to turn on the fan.",
                         sender=self.email_address,
-                        recipients=["lowkeymischievous@gmail.com"],
+                        recipients=["jonathan.markovic@outlook.com"],
                         password=self.email_password
                     )
                     self.fridge1_alert_sent = True
@@ -434,7 +445,7 @@ class Controller:
                     subject=subject,
                     body=body,
                     sender=self.email_address,
-                    recipients=["lowkeymischievous@gmail.com"],
+                    recipients=["jonathan.markovic@outlook.com"],
                     password=self.email_password
                 )
                 self.email_sent = True  # mark as sent
@@ -499,7 +510,7 @@ class Controller:
                             subject="Fridge 2 Alert 🚨",
                             body=f"Fridge 2 temperature is {f2}°C.\nReply YES to turn on the fan.",
                             sender=self.email_address,
-                            recipients=["lowkeymischievous@gmail.com"],
+                            recipients=["jonathan.markovic@outlook.com"],
                             password=self.email_password
                         )
                         fridge2_alert_sent = True

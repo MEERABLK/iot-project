@@ -105,11 +105,32 @@ data.forEach(p => {
             onclick="deleteProduct(${p.product_id})">
             Delete
         </button>
+
+        <button class="button" style="background:#4dabf7;"
+            onclick="assignUnknownTags(${p.product_id})">
+            Add Tag
+        </button>
     </div>
 `;
 
     container.appendChild(card);
 });
+}
+
+async function assignUnknownTags(productId) {
+    const res = await fetch(`/products/${productId}/assign-tags`, {
+        method: "POST"
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage(`Success! Assigned tag ${data.new_epc} to product.`, "success");
+        loadProducts(); // Refresh the list to show the new EPC
+    } else {
+        // This will trigger if the unknown_tags list is empty
+        showMessage(data.error, "error");
+    }
 }
 
 

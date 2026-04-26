@@ -316,6 +316,28 @@ def get_user_info():
     
 #     socketio.run(app, debug=True)
 
+@app.route('/products/<int:id>/assign-tags', methods=['POST'])
+def assign_tags(id):
+    # 'id' here is the product_id from the URL
+    tags = controller.get_unknown_tags()
+    
+    if not tags:
+        return jsonify({"error": "No tags detected by scanner"}), 400
+
+    new_epc = tags[0] # Take the most recent unknown tag
+
+    # Call the new function using product_id
+    success = data.add_rfid_tag(id, new_epc)
+    
+    if success:
+        controller.clear_unknown_tags()
+        return jsonify({
+            "status": "success",
+            "message": f"Tag {new_epc} linked successfully!"
+        })
+    
+    return jsonify({"error": "Could not link tag to database"}), 500
+
 if __name__ == '__main__':
     import threading
 

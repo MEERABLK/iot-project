@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import os
 load_dotenv()  # loads variables from .env
 
+print("DEBUG: Database file loaded successfully!")
+
 # from db.database import get_connection
 
 db_host = os.getenv("DB_HOST")
@@ -78,44 +80,6 @@ def set_threshold(fridge_name, threshold_value):
             mycursor.close()
             mydb.close()
 
-def verify_user(email, password):
-    """
-    Checks if a user exists with the given email and password.
-    Returns the user dictionary if successful, None otherwise.
-    """
-    try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
-        # Using dictionary=True so we can access user['id'] later
-        cursor = mydb.cursor(dictionary=True)
-
-        # Query to find the user by email
-        # NOTE: In a production app, you would fetch by email, 
-        # then verify a hashed password using bcrypt or hashlib.
-        query = "SELECT * FROM customers WHERE email = %s AND password = %s"
-        cursor.execute(query, (email, password))
-
-        user = cursor.fetchone()
-
-        cursor.close()
-        mydb.close()
-
-        if user:
-            print(f"✅ User verified: {email}")
-            return user
-        else:
-            print(f"❌ Verification failed for: {email}")
-            return None
-
-    except mysql.connector.Error as err:
-        print(f"🚨 Database Error during verification: {err}")
-        return None
-    
-        
 def add_customer(first, last, email, phone, address, city, province, postal_code):
     try:
         mydb = mysql.connector.connect(
@@ -242,37 +206,6 @@ def get_receipt_items(receipt_id):
         print(f"🚨 Database Error fetching receipt items: {err}")
         return []   
 
-#inventory update 
-def reduce_stock(product_id, qty):
-    db = mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
-    cursor = db.cursor()
-
-    cursor.execute(
-        "UPDATE inventory SET quantity = quantity - %s WHERE product_id = %s",
-        (qty, product_id)
-    )
-
-    db.commit()
-    cursor.close()
-    db.close()
-
-def get_all_products():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM products")
-    results = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return results    
-
 def add_product(name, category, price, upc_code, epc, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
@@ -309,100 +242,36 @@ def add_product(name, category, price, upc_code, epc, producer, quantity, image)
         cursor.close()
         conn.close()
 
-
-def get_connection():
-    return mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
-
-
-def get_threshold(fridge_name):
+def add_rfid_tag(product_id, epc):
+    """
+    Links a physical RFID tag (EPC) to a specific product using its product_id.
+    """
     try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
+        conn = get_connection()
+        cursor = conn.cursor()
 
-        mycursor = mydb.cursor()
+        # 1. (Optional) Check if this EPC already exists to prevent duplicate errors
+        cursor.execute("SELECT * FROM product_rfid WHERE epc_code = %s", (epc,))
+        if cursor.fetchone():
+            print(f"⚠️ Tag {epc} is already registered to a product.")
+            cursor.close()
+            conn.close()
+            return False
 
-        sql = "SELECT temperature_threshold FROM thresholds WHERE fridge_name = %s"
-        mycursor.execute(sql, (fridge_name,))
+        # 2. Insert the new mapping
+        sql = "INSERT INTO product_rfid (product_id, epc_code) VALUES (%s, %s)"
+        cursor.execute(sql, (product_id, epc))
 
-        result = mycursor.fetchone()
-
-        mycursor.close()
-        mydb.close()
-
-        if result:
-            return result[0]  # return threshold value
-        else:
-            return None
-
-    except mysql.connector.Error as err:
-        print("Database Error:", err)
-        return None
-    
-def set_threshold(fridge_name, threshold_value):
-    mydb = None
-    print(fridge_name, threshold_value)
-    try:
-        value = float(threshold_value)
-
-        mydb = mysql.connector.connect(
-           # host=db_host, user=db_user, password=db_password, database="store_db"
-             host=db_host, user=db_user, password=db_password, database="smartstoreiotproject_db"
-        )
-        mycursor = mydb.cursor()
-
-        sql = """
-            INSERT INTO thresholds (fridge_name, temperature_threshold) 
-            VALUES (%s, %s) 
-            ON DUPLICATE KEY UPDATE temperature_threshold = %s
-        """
-        mycursor.execute(sql, (fridge_name, value, value)) # passing the value twice, one for insert case, one for update case
-
-        mydb.commit()
-        return True
-
-    except (mysql.connector.Error, ValueError) as err:
-        print(f"Error saving threshold: {err}")
-        return False
-    finally:
-        if mydb and mydb.is_connected():
-            mycursor.close()
-            mydb.close()
+        conn.commit()
+        print(f"✅ Successfully linked tag {epc} to product ID {product_id}")
         
-def add_customer(first, last, email, phone, address, city, province, postal_code):
-    try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
-
-        mycursor = mydb.cursor()
-
-        sql = "INSERT INTO customers (first_name, last_name, email, phone, address, city, province, postal_code) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-        values = (first, last, email, phone, address, city, province, postal_code)
-
-        mycursor.execute(sql, values)
-        mydb.commit()
-
-        mycursor.close()
-        mydb.close()
-
+        cursor.close()
+        conn.close()
         return True
 
     except mysql.connector.Error as err:
-        print("Database Error:", err)
+        print(f"🚨 Database Error in add_rfid_tag: {err}")
         return False
-
 
 ## Phase 2 products epc
 def get_product_by_epc(epc):
@@ -423,6 +292,50 @@ def get_product_by_epc(epc):
 
     return result
 
+def get_product_by_tag_epc(epc):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT p.* 
+        FROM products p
+        JOIN product_rfid r ON p.product_id = r.product_id
+        WHERE r.epc_code = %s
+    """, (epc,))
+
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return result
+
+def get_product_by_id(product_id):
+    """
+    Fetches a single product and its associated UPC code by the product_id.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # We join with product_upc because assign_tags needs the 'upc' 
+        # to link the new RFID tag.
+        query = """
+            SELECT p.*, u.upc_code as upc
+            FROM products p
+            LEFT JOIN product_upc u ON p.product_id = u.product_id
+            WHERE p.product_id = %s
+        """
+        cursor.execute(query, (product_id,))
+        result = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"🚨 Database Error in get_product_by_id: {e}")
+        return None
+
 ## Phase 2 products upc
 def get_product_by_upc(upc_code):
     conn = get_connection()
@@ -441,144 +354,6 @@ def get_product_by_upc(upc_code):
     conn.close()
 
     return result
-
-#inventory update 
-def reduce_stock(product_id, qty):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE product_upc
-        SET quantity = quantity - %s
-        WHERE product_id = %s
-    """, (qty, product_id))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-def get_all_products():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM products")
-    results = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return results    
-
-
-
-def delete_product(product_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-# database.py
-import mysql.connector
-from dotenv import load_dotenv
-import os
-load_dotenv()  # loads variables from .env
-
-# from db.database import get_connection
-
-db_host = os.getenv("DB_HOST")
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
-
-
-def get_connection():
-    return mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database="smartstoreiotproject_db"
-    )
-
-
-def get_threshold(fridge_name):
-    try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
-
-        mycursor = mydb.cursor()
-
-        sql = "SELECT temperature_threshold FROM thresholds WHERE fridge_name = %s"
-        mycursor.execute(sql, (fridge_name,))
-
-        result = mycursor.fetchone()
-
-        mycursor.close()
-        mydb.close()
-
-        if result:
-            return result[0]  # return threshold value
-        else:
-            return None
-
-    except mysql.connector.Error as err:
-        print("Database Error:", err)
-        return None
-    
-def set_threshold(fridge_name, threshold_value):
-    mydb = None
-    print(fridge_name, threshold_value)
-    try:
-        value = float(threshold_value)
-
-        mydb = mysql.connector.connect(
-           # host=db_host, user=db_user, password=db_password, database="store_db"
-             host=db_host, user=db_user, password=db_password, database="smartstoreiotproject_db"
-        )
-        mycursor = mydb.cursor()
-
-        sql = """
-            INSERT INTO thresholds (fridge_name, temperature_threshold) 
-            VALUES (%s, %s) 
-            ON DUPLICATE KEY UPDATE temperature_threshold = %s
-        """
-        mycursor.execute(sql, (fridge_name, value, value)) # passing the value twice, one for insert case, one for update case
-
-        mydb.commit()
-        return True
-
-    except (mysql.connector.Error, ValueError) as err:
-        print(f"Error saving threshold: {err}")
-        return False
-    finally:
-        if mydb and mydb.is_connected():
-            mycursor.close()
-            mydb.close()
-        
-def add_customer(first, last, email, phone, address, city, province, postal_code):
-    try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
-
-        mycursor = mydb.cursor()
-
-        sql = "INSERT INTO customers (first_name, last_name, email, phone, address, city, province, postal_code) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-        values = (first, last, email, phone, address, city, province, postal_code)
-
-        mycursor.execute(sql, values)
-        mydb.commit()
-
-        mycursor.close()
-        mydb.close()
-
-        return True
-
-    except mysql.connector.Error as err:
-        print("Database Error:", err)
-        return False
 
 #inventory update 
 def reduce_stock(product_id, qty):
