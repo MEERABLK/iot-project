@@ -40,6 +40,8 @@ class Controller:
 
         # 🛰️ RFID & Cart Logic
         self.rfid_tags = []         # Current tags physically on the scanner
+        # Scanned EPCs
+        self.scanned_epcs = set()
         self.unknown_tags = [] # unknown tags to be used for adding epcs to the database
         self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
         self.cart = {}              # Stores product info and quantities
@@ -88,29 +90,42 @@ class Controller:
     #===core logic===
     def _handle_tag(self, tag_epc):
         try:
-            # 1. Use the new JOINed lookup
-            product = database.get_product_by_tag_epc(tag_epc)
+            # 1. Safety check for the database attribute and perform lookup
+            # This prevents the "module has no attribute" crash
+            product = None
+            if hasattr(database, 'get_product_by_epc'):
+                product = database.get_product_by_epc(tag_epc)
+            else:
+                print("🚨 Error: database.py is missing 'get_product_by_epc' function!")
+                return None
 
+            # 2. Handle Unregistered Tags
             if not product:
                 print(f"⚠️ Unregistered tag detected: {tag_epc}")
                 with self.lock:
                     if tag_epc not in self.unknown_tags:
                         self.unknown_tags.append(tag_epc)
+                        # Trigger a SocketIO emit here if you want the Admin UI 
+                        # to update the list of unknown tags in real-time.
                 return {"error": "unknown_tag", "epc": tag_epc}
 
-            # 2. Prevent Double-Scanning of the same physical item 
-            # (Assuming you have self.scanned_epcs = set() in __init__)
+            # 3. Prevent Double-Scanning of the same physical item
+            # Note: Ensure self.scanned_epcs = set() is in your __init__
             with self.lock:
+                if not hasattr(self, 'scanned_epcs'):
+                    self.scanned_epcs = set()
+                    
                 if tag_epc in self.scanned_epcs:
-                    print(f"ℹ️ Tag {tag_epc} already in cart. Skipping.")
-                    return None
+                    # We return a dummy dict so the background task knows 
+                    # this tag is "known" and shouldn't be added to unknown_tags
+                    return {"status": "already_scanned"}
                 
                 self.scanned_epcs.add(tag_epc)
 
-            # 3. Add to cart based on Product ID
+            # 4. Add to cart based on Product data
             pid = product.get('product_id')
-            name = product.get('name')
-            price = float(product.get('price'))
+            name = product.get('name', 'Unknown Item')
+            price = float(product.get('price', 0.0))
 
             with self.lock:
                 if pid in self.cart:
@@ -127,7 +142,7 @@ class Controller:
             return product
 
         except Exception as e:
-            print(f"🚨 Error: {e}")
+            print(f"🚨 Handle Tag Exception: {e}")
             return None
         
     def get_unknown_tags(self):
@@ -267,7 +282,7 @@ class Controller:
         """Decreases quantity or removes product from cart when EPC is lost."""
         try:
             # 1. Fetch product to find its product_id
-            product = database.get_product_by_tag_epc(tag_epc)
+            product = database.get_product_by_epc(tag_epc)
             if not product:
                 return # Can't remove what we don't recognize
 
