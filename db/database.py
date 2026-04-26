@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import os
 load_dotenv()  # loads variables from .env
 
+print("DEBUG: Database file loaded successfully!")
+
 # from db.database import get_connection
 
 db_host = os.getenv("DB_HOST")
@@ -258,6 +260,32 @@ def get_product_by_epc(epc):
     conn.close()
 
     return result
+
+def get_product_by_id(product_id):
+    """
+    Fetches a single product and its associated UPC code by the product_id.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # We join with product_upc because assign_tags needs the 'upc' 
+        # to link the new RFID tag.
+        query = """
+            SELECT p.*, u.upc_code as upc
+            FROM products p
+            LEFT JOIN product_upc u ON p.product_id = u.product_id
+            WHERE p.product_id = %s
+        """
+        cursor.execute(query, (product_id,))
+        result = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"🚨 Database Error in get_product_by_id: {e}")
+        return None
 
 ## Phase 2 products upc
 def get_product_by_upc(upc_code):

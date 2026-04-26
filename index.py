@@ -318,21 +318,32 @@ def get_user_info():
 
 @app.route('/products/<int:id>/assign-tags', methods=['POST'])
 def assign_tags(id):
+    # 1. Get unknown tags from hardware
     tags = controller.get_unknown_tags()
     if not tags:
-        return jsonify({"error": "No tags detected"}), 400
+        return jsonify({"error": "No unknown tags detected. Scan a tag first!"}), 400
 
-    # Get the UPC for the product selected in the Admin Panel
+    # 2. Get product details (Requires get_product_by_id in database.py)
     product = data.get_product_by_id(id)
-    upc = product.get('upc')
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
 
-    # Register the unique physical tag
-    success = data.add_rfid_tag(tags[0], upc)
+    # 3. Use the first unknown tag
+    new_epc = tags[0]
+    
+    # 4. Link the tag to the product
+    # Note: Using product_id directly is safer for your current schema
+    success = data.add_rfid_tag(new_epc, product.get('upc'))
     
     if success:
         controller.clear_unknown_tags()
-        return jsonify({"status": "success"})
-    return jsonify({"error": "Failed to link tag"}), 500
+        return jsonify({
+            "status": "success", 
+            "new_epc": new_epc,
+            "message": f"Linked tag to {product['name']}"
+        })
+    
+    return jsonify({"error": "Database failed to link tag"}), 500
 
 if __name__ == '__main__':
     import threading
