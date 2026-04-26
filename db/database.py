@@ -242,8 +242,57 @@ def add_product(name, category, price, upc_code, epc, producer, quantity, image)
         cursor.close()
         conn.close()
 
+def add_rfid_tag(product_id, epc):
+    """
+    Links a physical RFID tag (EPC) to a specific product using its product_id.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # 1. (Optional) Check if this EPC already exists to prevent duplicate errors
+        cursor.execute("SELECT * FROM product_rfid WHERE epc_code = %s", (epc,))
+        if cursor.fetchone():
+            print(f"⚠️ Tag {epc} is already registered to a product.")
+            cursor.close()
+            conn.close()
+            return False
+
+        # 2. Insert the new mapping
+        sql = "INSERT INTO product_rfid (product_id, epc_code) VALUES (%s, %s)"
+        cursor.execute(sql, (product_id, epc))
+
+        conn.commit()
+        print(f"✅ Successfully linked tag {epc} to product ID {product_id}")
+        
+        cursor.close()
+        conn.close()
+        return True
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error in add_rfid_tag: {err}")
+        return False
+
 ## Phase 2 products epc
 def get_product_by_epc(epc):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT p.* 
+        FROM products p
+        JOIN product_rfid r ON p.product_id = r.product_id
+        WHERE r.epc_code = %s
+    """, (epc,))
+
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return result
+
+def get_product_by_tag_epc(epc):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
