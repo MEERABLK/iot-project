@@ -40,7 +40,7 @@ class Controller:
 
         # 🛰️ RFID & Cart Logic
         self.rfid_tags = []         # Current tags physically on the scanner
-        self.unkown_tags = [] # unknown tags to be used for adding epcs to the database
+        self.unknown_tags = [] # unknown tags to be used for adding epcs to the database
         self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
         self.cart = {}              # Stores product info and quantities
         self.carts = {}             # For historical or multiple cart tracking
@@ -61,20 +61,26 @@ class Controller:
     def _rfid_background_task(self):
         """Syncs the controller state and the cart with the physical scanner."""
         for current_tags in get_rfid_tags():
-            # Update the list for the UI display
             with self.lock:
                 self.rfid_tags = current_tags
 
-            # 1. ADDITION: Handle newly detected tags
+            # 1. Handle newly detected tags
             for tag_epc in current_tags:
                 if tag_epc not in self.cart_check_list:
-                    self._handle_tag(tag_epc)
-                    self.cart_check_list.add(tag_epc)
+                    # Capture the result of the handle_tag call
+                    result = self._handle_tag(tag_epc)
+                    
+                    # ONLY add to the check_list if it's a valid product
+                    # If it returns an error dict (unknown_tag), don't block it here
+                    if result and "error" not in result:
+                        self.cart_check_list.add(tag_epc)
+                    else:
+                        # Log that it's being ignored for now or handled as unknown
+                        print(f"DEBUG: Tag {tag_epc} is unknown/invalid. Not adding to checklist.")
 
             # 2. REMOVAL: Handle tags no longer on the scanner
             for tag_epc in list(self.cart_check_list):
                 if tag_epc not in current_tags:
-                    # Remove from the cart tracking and the check list
                     self._handle_removal(tag_epc) 
                     self.cart_check_list.remove(tag_epc)
                     print(f"🗑️ Tag {tag_epc} removed from scanner & cart")
@@ -261,7 +267,7 @@ class Controller:
         """Decreases quantity or removes product from cart when EPC is lost."""
         try:
             # 1. Fetch product to find its product_id
-            product = database.get_product_by_epc(tag_epc)
+            product = database.get_product_by_tag_epc(tag_epc)
             if not product:
                 return # Can't remove what we don't recognize
 
@@ -345,22 +351,6 @@ class Controller:
         except Exception as e:
             print(f"🚨 Controller Error during checkout: {e}")
             return None
-           
-    # def _background_tasks(self):
-    #     while True:
-    #         # Example: control GPIO based on temperature
-    #         if self.data.fridge1Temperature is not None:
-    #             if self.data.fridge1Temperature > 8:
-    #                 # send alert
-    #                 send_email.send_email(
-    #                     subject="Fridge Alert 🚨",
-    #                     body=f"Temp too high: {self.data.fridge1Temperature}. Would you like to turn on the fan?",
-    #                     sender=EMAIL_ADDRESS,
-    #                     recipients=[""],
-    #                     password=EMAIL_PASSWORD
-    #                 )
-
-    #         time.sleep(5)
 
     def get_cart(self):
         return self.cart
@@ -391,7 +381,7 @@ class Controller:
                         subject="Fridge Alert 🚨",
                         body=f"The following temperatures are too high:\n\n{message}\nReply YES to turn on the fan.",
                         sender=self.email_address,
-                        recipients=["lowkeymischievous@gmail.com"],
+                        recipients=["jonathan.markovic@outlook.com"],
                         password=self.email_password
                     )
                     self.fridge1_alert_sent = True
@@ -440,7 +430,7 @@ class Controller:
                     subject=subject,
                     body=body,
                     sender=self.email_address,
-                    recipients=["lowkeymischievous@gmail.com"],
+                    recipients=["jonathan.markovic@outlook.com"],
                     password=self.email_password
                 )
                 self.email_sent = True  # mark as sent
@@ -505,7 +495,7 @@ class Controller:
                             subject="Fridge 2 Alert 🚨",
                             body=f"Fridge 2 temperature is {f2}°C.\nReply YES to turn on the fan.",
                             sender=self.email_address,
-                            recipients=["lowkeymischievous@gmail.com"],
+                            recipients=["jonathan.markovic@outlook.com"],
                             password=self.email_password
                         )
                         fridge2_alert_sent = True

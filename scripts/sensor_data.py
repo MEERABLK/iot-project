@@ -20,7 +20,11 @@ data = SensorData()
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code", rc)
-    client.subscribe("#")  # subscribe to all topics
+    # Subscribe only to the specific fridge topics
+    client.subscribe("fridge1/temperature")
+    client.subscribe("fridge1/humidity")
+    client.subscribe("fridge2/temperature")
+    client.subscribe("fridge2/humidity")
 
 def on_message(client, userdata, msg):
     payload = msg.payload.decode()
