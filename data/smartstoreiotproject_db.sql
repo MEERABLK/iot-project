@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 20, 2026 at 02:42 PM
--- Server version: 11.8.6-MariaDB-0+deb13u1 from Debian
+-- Generation Time: Apr 27, 2026 at 12:20 AM
+-- Server version: 11.8.3-MariaDB-0+deb13u1 from Debian
 -- PHP Version: 8.4.16
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `smartstoreiotproject_db`
 --
-CREATE DATABASE IF NOT EXISTS `smartstoreiotproject_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
-USE `smartstoreiotproject_db`;
 
 -- --------------------------------------------------------
 
@@ -29,14 +27,27 @@ USE `smartstoreiotproject_db`;
 -- Table structure for table `admins`
 --
 
-DROP TABLE IF EXISTS `admins`;
-CREATE TABLE IF NOT EXISTS `admins` (
-  `admin_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `admins` (
+  `admin_id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`admin_id`),
-  UNIQUE KEY `username` (`username`)
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `ble_sensor_logs`
+--
+
+CREATE TABLE `ble_sensor_logs` (
+  `log_id` int(11) NOT NULL,
+  `sensor_name` varchar(50) DEFAULT NULL,
+  `temperature` decimal(5,2) DEFAULT NULL,
+  `humidity` decimal(5,2) DEFAULT NULL,
+  `light_level` int(11) DEFAULT NULL,
+  `motion_detected` tinyint(1) DEFAULT 0,
+  `recorded_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
@@ -45,9 +56,8 @@ CREATE TABLE IF NOT EXISTS `admins` (
 -- Table structure for table `customers`
 --
 
-DROP TABLE IF EXISTS `customers`;
-CREATE TABLE IF NOT EXISTS `customers` (
-  `customer_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `customers` (
+  `customer_id` int(11) NOT NULL,
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
   `email` varchar(100) NOT NULL,
@@ -60,11 +70,8 @@ CREATE TABLE IF NOT EXISTS `customers` (
   `membership_number` varchar(20) DEFAULT NULL,
   `points` int(11) DEFAULT 0,
   `password` varchar(255) NOT NULL,
-  `username` text DEFAULT NULL,
-  PRIMARY KEY (`customer_id`),
-  UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `membership_number` (`membership_number`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  `username` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `customers`
@@ -85,14 +92,11 @@ INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `pho
 -- Table structure for table `inventory`
 --
 
-DROP TABLE IF EXISTS `inventory`;
-CREATE TABLE IF NOT EXISTS `inventory` (
-  `inventory_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `inventory` (
+  `inventory_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT 0,
-  `last_updated` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`inventory_id`),
-  UNIQUE KEY `unique_product` (`product_id`)
+  `last_updated` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
@@ -101,19 +105,16 @@ CREATE TABLE IF NOT EXISTS `inventory` (
 -- Table structure for table `products`
 --
 
-DROP TABLE IF EXISTS `products`;
-CREATE TABLE IF NOT EXISTS `products` (
-  `product_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `products` (
+  `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `category` varchar(50) DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
   `upc` varchar(13) DEFAULT NULL,
   `producer` varchar(100) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
-  `quantity` int(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`product_id`),
-  UNIQUE KEY `upc` (`upc`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  `quantity` int(11) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `products`
@@ -133,18 +134,15 @@ INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `produ
 -- Table structure for table `receipts`
 --
 
-DROP TABLE IF EXISTS `receipts`;
-CREATE TABLE IF NOT EXISTS `receipts` (
-  `receipt_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `receipts` (
+  `receipt_id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
   `total` decimal(10,2) DEFAULT NULL,
   `points_earned` int(11) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `payment_method` varchar(50) DEFAULT 'SIMULATION',
-  `status` varchar(20) DEFAULT 'completed',
-  PRIMARY KEY (`receipt_id`),
-  KEY `customer_id` (`customer_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  `status` varchar(20) DEFAULT 'completed'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `receipts`
@@ -172,18 +170,14 @@ INSERT INTO `receipts` (`receipt_id`, `customer_id`, `total`, `points_earned`, `
 -- Table structure for table `receipt_items`
 --
 
-DROP TABLE IF EXISTS `receipt_items`;
-CREATE TABLE IF NOT EXISTS `receipt_items` (
-  `item_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `receipt_items` (
+  `item_id` int(11) NOT NULL,
   `receipt_id` int(11) DEFAULT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `subtotal` decimal(10,2) GENERATED ALWAYS AS (`quantity` * `price`) STORED,
-  PRIMARY KEY (`item_id`),
-  KEY `receipt_id` (`receipt_id`),
-  KEY `product_id` (`product_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  `subtotal` decimal(10,2) GENERATED ALWAYS AS (`quantity` * `price`) STORED
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `receipt_items`
@@ -224,15 +218,26 @@ INSERT INTO `receipt_items` (`item_id`, `receipt_id`, `product_id`, `quantity`, 
 -- Table structure for table `receptions`
 --
 
-DROP TABLE IF EXISTS `receptions`;
-CREATE TABLE IF NOT EXISTS `receptions` (
-  `reception_id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `receptions` (
+  `reception_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity_received` int(11) DEFAULT NULL,
   `date_received` datetime DEFAULT current_timestamp(),
-  `supplier` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`reception_id`),
-  KEY `product_id` (`product_id`)
+  `supplier` varchar(100) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `report_exports`
+--
+
+CREATE TABLE `report_exports` (
+  `export_id` int(11) NOT NULL,
+  `report_type` varchar(50) DEFAULT NULL,
+  `exported_by` varchar(50) DEFAULT NULL,
+  `export_format` enum('PDF','CSV','PNG') DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
@@ -241,11 +246,21 @@ CREATE TABLE IF NOT EXISTS `receptions` (
 -- Table structure for table `rfid_tags`
 --
 
-DROP TABLE IF EXISTS `rfid_tags`;
-CREATE TABLE IF NOT EXISTS `rfid_tags` (
+CREATE TABLE `rfid_tags` (
   `upc` text NOT NULL,
-  `epc` text NOT NULL,
-  UNIQUE KEY `rfid_unique` (`epc`) USING HASH
+  `epc` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `stock_thresholds`
+--
+
+CREATE TABLE `stock_thresholds` (
+  `threshold_id` int(11) NOT NULL,
+  `category` varchar(50) DEFAULT NULL,
+  `min_quantity` int(11) NOT NULL DEFAULT 5
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
@@ -254,13 +269,11 @@ CREATE TABLE IF NOT EXISTS `rfid_tags` (
 -- Table structure for table `thresholds`
 --
 
-DROP TABLE IF EXISTS `thresholds`;
-CREATE TABLE IF NOT EXISTS `thresholds` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `thresholds` (
+  `id` int(11) NOT NULL,
   `fridge_name` varchar(50) DEFAULT NULL,
-  `temperature_threshold` float DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  `temperature_threshold` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `thresholds`
@@ -280,6 +293,162 @@ INSERT INTO `thresholds` (`id`, `fridge_name`, `temperature_threshold`) VALUES
 (11, 'fridge1', 9),
 (12, 'fridge1', 9),
 (13, 'fridge1', 19);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `admins`
+--
+ALTER TABLE `admins`
+  ADD PRIMARY KEY (`admin_id`),
+  ADD UNIQUE KEY `username` (`username`);
+
+--
+-- Indexes for table `ble_sensor_logs`
+--
+ALTER TABLE `ble_sensor_logs`
+  ADD PRIMARY KEY (`log_id`);
+
+--
+-- Indexes for table `customers`
+--
+ALTER TABLE `customers`
+  ADD PRIMARY KEY (`customer_id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `membership_number` (`membership_number`);
+
+--
+-- Indexes for table `inventory`
+--
+ALTER TABLE `inventory`
+  ADD PRIMARY KEY (`inventory_id`),
+  ADD UNIQUE KEY `unique_product` (`product_id`);
+
+--
+-- Indexes for table `products`
+--
+ALTER TABLE `products`
+  ADD PRIMARY KEY (`product_id`),
+  ADD UNIQUE KEY `upc` (`upc`);
+
+--
+-- Indexes for table `receipts`
+--
+ALTER TABLE `receipts`
+  ADD PRIMARY KEY (`receipt_id`),
+  ADD KEY `customer_id` (`customer_id`);
+
+--
+-- Indexes for table `receipt_items`
+--
+ALTER TABLE `receipt_items`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `receipt_id` (`receipt_id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
+-- Indexes for table `receptions`
+--
+ALTER TABLE `receptions`
+  ADD PRIMARY KEY (`reception_id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
+-- Indexes for table `report_exports`
+--
+ALTER TABLE `report_exports`
+  ADD PRIMARY KEY (`export_id`);
+
+--
+-- Indexes for table `rfid_tags`
+--
+ALTER TABLE `rfid_tags`
+  ADD UNIQUE KEY `rfid_unique` (`epc`) USING HASH;
+
+--
+-- Indexes for table `stock_thresholds`
+--
+ALTER TABLE `stock_thresholds`
+  ADD PRIMARY KEY (`threshold_id`),
+  ADD UNIQUE KEY `category` (`category`);
+
+--
+-- Indexes for table `thresholds`
+--
+ALTER TABLE `thresholds`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `admins`
+--
+ALTER TABLE `admins`
+  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `ble_sensor_logs`
+--
+ALTER TABLE `ble_sensor_logs`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customers`
+--
+ALTER TABLE `customers`
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+
+--
+-- AUTO_INCREMENT for table `inventory`
+--
+ALTER TABLE `inventory`
+  MODIFY `inventory_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `products`
+--
+ALTER TABLE `products`
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `receipts`
+--
+ALTER TABLE `receipts`
+  MODIFY `receipt_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT for table `receipt_items`
+--
+ALTER TABLE `receipt_items`
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+
+--
+-- AUTO_INCREMENT for table `receptions`
+--
+ALTER TABLE `receptions`
+  MODIFY `reception_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `report_exports`
+--
+ALTER TABLE `report_exports`
+  MODIFY `export_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `stock_thresholds`
+--
+ALTER TABLE `stock_thresholds`
+  MODIFY `threshold_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `thresholds`
+--
+ALTER TABLE `thresholds`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- Constraints for dumped tables
