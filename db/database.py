@@ -145,6 +145,18 @@ def create_receipt(customer_id, cart, discount_percent=0.0):
                 (receipt_id, pid, item['qty'], item['price'])
             )
 
+
+        for pid, item in cart.items():
+            cursor.execute(
+                "INSERT INTO receipt_items (receipt_id, product_id, quantity, price) VALUES (%s, %s, %s, %s)",
+                 (receipt_id, pid, item['qty'], item['price'])
+            )
+
+    # 🔥 ADD THIS LINE
+            cursor.execute(
+                "UPDATE inventory SET quantity = quantity - %s WHERE product_id = %s",
+                 (item['qty'], pid)
+            )
         db.commit()
         cursor.close()
         db.close()

@@ -321,54 +321,8 @@ class Controller:
             # modify the live data used by the background threads.
             return dict(self.cart)
         
-    def process_final_checkout(self, customer_id, discount_percent):
-        try:
-            if not self.cart:
-                print("⚠️ Checkout failed: Cart is empty.")
-                return None
 
-            # 1. Save to DB (returns the integer ID)
-            from db import database as data
-            receipt_id = data.create_receipt(customer_id, self.cart, discount_percent)
-
-            if receipt_id:
-                # --- NEW: Internal Hand-off for Emailing ---
-                # 2. Fetch the items back from the DB so we have subtotals/names
-                receipt_items = data.get_receipt_items(receipt_id)
-                
-                # 3. Store in the exact format send_receipt expects
-                self.last_receipt = {
-                    "receipt_id": receipt_id,
-                    "items": receipt_items,
-                    "customer_id": customer_id
-                }
-                # ------------------------------------------
-
-                # 4. Clear the cart state
-                with self.lock:
-                    self.cart = {}
-                    # Clear any other tracking lists you have
-                    if hasattr(self, 'cart_check_list'):
-                        self.cart_check_list.clear()
-                
-                # 5. Notify frontend
-                if hasattr(self, 'socketio'):
-                    self.socketio.emit('cart_updated', {'cart': {}, 'total': 0})
-                
-                with self.lock:
-                    self.cart = {}
-                    self.scanned_epcs.clear() # 👈 Clear physical tag history
-                print(f"✅ Controller: Checkout finalized for Receipt #{receipt_id}")
-                return receipt_id
-            else:
-                return None
-
-        except Exception as e:
-            print(f"🚨 Controller Error during checkout: {e}")
-            return None
-
-    def get_cart(self):
-        return self.cart
+    
     
     def _background_tasks(self):
         threshold = 19

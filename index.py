@@ -314,6 +314,20 @@ def get_user_info():
 #         threading.Thread(target=controller.start, daemon=True).start()
     
 #     socketio.run(app, debug=True)
+@app.route('/api/barcode', methods=['POST'])
+def scan_barcode():
+    data_req = request.get_json()
+    upc = data_req.get('upc')
+
+    if not upc:
+        return jsonify({"error": "No UPC provided"}), 400
+
+    result = controller.add_by_barcode(upc)
+
+    if "error" in result:
+        return jsonify(result), 404
+
+    return jsonify({"status": "added", "product": result})
 
 @app.route('/products/<int:id>/assign-tags', methods=['POST'])
 def assign_tags(id):
