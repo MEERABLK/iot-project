@@ -429,33 +429,42 @@ def update_product(id, name, category, price, upc_code, epc, producer, quantity,
     cursor = conn.cursor()
 
     try:
-        # update main product
+        # 1. update main product
         cursor.execute("""
             UPDATE products
             SET name=%s, category=%s, price=%s, producer=%s, image=%s
             WHERE product_id=%s
         """, (name, category, price, producer, image, id))
 
-        # update UPC
+        # 2. update UPC (ONLY UPC)
         cursor.execute("""
-            UPDATE product_upc
-            SET upc_code=%s, quantity=%s
-            WHERE product_id=%s
-        """, (upc_code, quantity, id))
+            INSERT INTO product_upc (product_id, upc_code)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE upc_code = VALUES(upc_code)
+        """, (id, upc_code))
 
-        # update EPC (only if needed)
+        # 3. update inventory
+        cursor.execute("""
+            UPDATE inventory
+            SET quantity=%s
+            WHERE product_id=%s
+        """, (quantity, id))
+
+        # 4. update RFID (better: replace instead of update 1 row)
         if epc:
             cursor.execute("""
-                UPDATE product_rfid
-                SET epc_code=%s
-                WHERE product_id=%s
-                LIMIT 1
-            """, (epc, id))
+                DELETE FROM product_rfid WHERE product_id=%s
+            """, (id,))
+
+            cursor.execute("""
+                INSERT INTO product_rfid (product_id, epc_code)
+                VALUES (%s, %s)
+            """, (id, epc))
 
         conn.commit()
 
     except Exception as e:
-        print(" Update error:", e)
+        print("UPDATE ERROR:", e)
         conn.rollback()
 
     finally:
