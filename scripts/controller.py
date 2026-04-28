@@ -416,7 +416,7 @@ class Controller:
                     self.toggle_on(1)
                     self.toggle_on(2)
                     time.sleep(5)
-                    # gpio_controller.stopMotor()
+                    gpio_controller.stop_motor()
                     # self.toggle_off(1)
                     # self.toggle_off(2)
                     
