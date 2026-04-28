@@ -206,36 +206,32 @@ def get_receipt_items(receipt_id):
         print(f"🚨 Database Error fetching receipt items: {err}")
         return []   
 
-def add_product(name, category, price, upc_code, epc, producer, quantity, image):
+def add_product(name, category, price, upc_code, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
-        # 1. Insert into products (NO UPC/EPC HERE)
         cursor.execute("""
             INSERT INTO products (name, category, price, producer, image)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s,%s,%s,%s,%s)
         """, (name, category, price, producer, image))
 
-        product_id = cursor.lastrowid  # 👈 IMPORTANT
+        product_id = cursor.lastrowid
 
-        # 2. Insert UPC (barcode + quantity)
         cursor.execute("""
-            INSERT INTO product_upc (product_id, upc_code, quantity)
-            VALUES (%s, %s, %s)
-        """, (product_id, upc_code, quantity))
+            INSERT INTO product_upc (product_id, upc_code)
+            VALUES (%s,%s)
+        """, (product_id, upc_code))
 
-        # 3. Insert RFID (EPC = one item)
-        if epc:
-            cursor.execute("""
-                INSERT INTO product_rfid (product_id, epc_code)
-                VALUES (%s, %s)
-            """, (product_id, epc))
+        cursor.execute("""
+            INSERT INTO inventory (product_id, quantity)
+            VALUES (%s,%s)
+        """, (product_id, quantity))
 
         conn.commit()
 
     except Exception as e:
-        print("❌ Add product error:", e)
+        print("add_product error:", e)
         conn.rollback()
 
     finally:
@@ -378,13 +374,30 @@ def get_all_products():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM products")
+    cursor.execute("""
+        SELECT
+            p.product_id,
+            p.name,
+            p.category,
+            p.price,
+            p.producer,
+            p.image,
+            i.quantity,
+            u.upc_code AS upc,
+            COUNT(r.epc_code) AS rfid_count
+        FROM products p
+        LEFT JOIN inventory i ON p.product_id = i.product_id
+        LEFT JOIN product_upc u ON p.product_id = u.product_id
+        LEFT JOIN product_rfid r ON p.product_id = r.product_id
+        GROUP BY p.product_id, u.upc_code
+    """)
+
     results = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return results    
+    return results
 
 
 def delete_product(product_id):

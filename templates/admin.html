@@ -24,9 +24,10 @@
             <input type="number" id="price" placeholder="Price" required>
             
             <input type="text" id="upc" placeholder=" UPC (Barcode)" required>
-            <input type="text" id="epc" placeholder="EPC (RFID Tag)" required>
             <input type="text" id="producer" placeholder="Producer" required>
             <input type="number" id="quantity" placeholder="Quantity" required>
+           
+           
             <input type="text" id="image" placeholder="Image URL">           
             <button class="button" type="submit">Add</button>
         </form>
@@ -76,6 +77,13 @@ async function loadProducts() {
     const res = await fetch('/products');
     const data = await res.json();
 
+if (!res.ok) {
+    showMessage(data.error || "Update failed", "error");
+    return;
+}
+
+// showMessage("Product updated", "success");
+
     const container = document.getElementById('productList');
     container.innerHTML = "";
 
@@ -84,18 +92,29 @@ data.forEach(p => {
     const card = document.createElement('div');
     card.className = "product-card";
 
- card.innerHTML = `
-    <div style="display:flex; gap:10px; align-items:center;">
-        ${p.image ? `<img src="${p.image}" style="width:60px; height:60px; object-fit:cover; border-radius:10px;">` : ""}
+card.innerHTML = `
+<div style="display:flex; gap:10px; align-items:flex-start; justify-content:space-between;">
+
+    <div style="display:flex; gap:10px;">
+        ${p.image ? `
+        <img src="${p.image}" 
+             style="width:60px; height:60px; object-fit:cover; border-radius:10px;">
+        ` : ""}
 
         <div>
             <b>${p.name}</b><br>
+
             $${p.price} | Qty: ${p.quantity}<br>
-            <small>${p.category || ""}</small>
+
+            <small>${p.category || ""}</small><br>
+
+            <small><b>UPC:</b> ${p.upc || "N/A"}</small><br>
+
+            <small><b>RFID Tags:</b> ${p.rfid_count || 0} / ${p.quantity}</small>
         </div>
     </div>
 
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; flex-direction:column; gap:8px;">
         <button class="button"
             onclick='openEdit(${JSON.stringify(p)})'>
             Edit
@@ -111,6 +130,8 @@ data.forEach(p => {
             Add Tag
         </button>
     </div>
+
+</div>
 `;
 
     container.appendChild(card);
@@ -138,16 +159,15 @@ async function assignUnknownTags(productId) {
 document.getElementById("addForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const product = {
-        name: document.getElementById("name").value.trim(),
-        category: document.getElementById("category").value.trim(),
-        price: document.getElementById("price").value,
-        upc: document.getElementById("upc").value.trim(),
-        epc: document.getElementById("epc").value.trim(),
-        producer: document.getElementById("producer").value.trim(),
-        quantity: document.getElementById("quantity").value,
-        image: document.getElementById("image").value.trim()
-    };
+const product = {
+    name: document.getElementById("name").value.trim(),
+    category: document.getElementById("category").value.trim(),
+    price: document.getElementById("price").value,
+    upc: document.getElementById("upc").value.trim(),
+    producer: document.getElementById("producer").value.trim(),
+    quantity: document.getElementById("quantity").value,
+    image: document.getElementById("image").value.trim()
+};
 
     // RUN VALIDATION 
     
@@ -250,8 +270,11 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     const data = await res.json();
     console.log(data);
 
-    closeEdit();
-    loadProducts();
+   if (res.ok) {
+    showMessage("Product updated successfully", "success");
+} else {
+    showMessage(data.error || "Update failed", "error");
+}
 });
 
 //validation
@@ -301,4 +324,3 @@ function showMessage(text, type) {
 </body>
 </html>
  {% endblock %}
- 
