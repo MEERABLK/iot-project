@@ -33,6 +33,13 @@ class Controller:
             "fridge2": 8
         }
 
+        self.msp01_data = {
+            "temp": 0, 
+            "hum": 0, 
+            "battery": 0, 
+            "status": "Offline"
+        }
+
         # ⚙️ Hardware Controls
         self.toggle_on = toggle_on
         self.toggle_off = toggle_off
@@ -409,7 +416,7 @@ class Controller:
                     self.toggle_on(1)
                     self.toggle_on(2)
                     time.sleep(5)
-                    # gpio_controller.stopMotor()
+                    gpio_controller.stopMotor()
                     # self.toggle_off(1)
                     # self.toggle_off(2)
                     
@@ -422,6 +429,12 @@ class Controller:
 
             time.sleep(5)
 
+    def get_ambient_data(self):
+        with self.lock:
+            print("bluetooth sensor")
+            print(self.msp01_data)
+            return self.msp01_data
+        
     # 👇 functions GUI can call
     def get_fridge1_temp(self):
         return self.data.fridge1Temperature

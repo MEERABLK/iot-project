@@ -34,15 +34,24 @@ def index():
 
 @app.route('/fridges')
 def fridges():
+    # Fetch the latest sensor data from the controller
+    sensor_data = controller.get_ambient_data()
+    
     return render_template(
         'fridges.html',
         fridge1_temp=controller.get_fridge1_temp(),
         fridge1_humidity=controller.get_fridge1_humidity(),
         fridge2_temp=controller.get_fridge2_temp(),
         fridge2_humidity=controller.get_fridge2_humidity(),
-        fridge1_threshold=controller.thresholds["fridge1"],  # fridge 1 threshold
-        fridge2_threshold=controller.thresholds["fridge2"],  # fridge 2 threshold
+        fridge1_threshold=controller.thresholds["fridge1"],
+        fridge2_threshold=controller.thresholds["fridge2"],
+        
+        # Add these lines to pass the MSP01 data to the HTML
+        ambient_temp=sensor_data.get("temp", "N/A"),
+        ambient_hum=sensor_data.get("hum", "N/A"),
+        sensor_status=sensor_data.get("status", "Offline")
     )
+
 @app.route('/send_email', methods=['POST'])
 def handle_send_email():
     email = request.form.get('email', '').strip()
@@ -87,11 +96,16 @@ def handle_fan():
 
 @app.route('/api/temps')
 def get_temps():
+    sensor_data = get_msp01_context()
     return jsonify({
         "fridge1_temp": controller.get_fridge1_temp(),
         "fridge1_humidity": controller.get_fridge1_humidity(),
         "fridge2_temp": controller.get_fridge2_temp(),
-        "fridge2_humidity": controller.get_fridge2_humidity()
+        "fridge2_humidity": controller.get_fridge2_humidity(),
+        "ambient_temp": sensor_data["temp"] if sensor_data else "N/A",
+        "ambient_hum": sensor_data["hum"] if sensor_data else "N/A",
+        "battery": sensor_data["battery"] if sensor_data else 0,
+        "status": "Online" if sensor_data else "Offline"
     })
 
 @app.route('/checkout')
@@ -337,6 +351,27 @@ def assign_tags(id):
         })
     
     return jsonify({"error": "Could not link tag to database"}), 500
+
+import requests
+
+def get_msp01_context():
+    url = "http://172.20.10.4:3001/context/device/c30000455da7/3"
+    try:
+        response = requests.get(url, timeout=2)
+        if response.status_code == 200:
+            data = response.json()
+            # Navigate the nested JSON structure
+            device_data = data['devices']['c30000455da7/3']['dynamb']
+            
+            return {
+                "temp": round(device_data.get('temperature'), 2),
+                "hum": round(device_data.get('relativeHumidity'), 2),
+                "lux": device_data.get('luminousFlux'),
+                "battery": device_data.get('batteryPercentage')
+            }
+    except Exception as e:
+        print(f"🚨 Context API Error: {e}")
+    return None
 
 if __name__ == '__main__':
     import threading
