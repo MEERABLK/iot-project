@@ -1,48 +1,40 @@
-from gpiozero.pins.mock import MockFactory, MockPWMPin
-from gpiozero import Device
+import RPi.GPIO as GPIO
+import time
 
-# Set the pin factory to Mock AND enable PWM support
-Device.pin_factory = MockFactory(pin_class=MockPWMPin)
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
-# Now your imports will work
-from gpiozero import LED, Buzzer, Motor
-from time import sleep
+# L293D Pin Mapping
+ENABLE_PIN = 22  # Connected to L293D Pin 1 (1,2EN)
+INPUT1     = 27  # Connected to L293D Pin 2 (1A)
+INPUT2     = 17  # Connected to L293D Pin 7 (2A)
 
-# Change one of these to an unused GPIO pin
-success_led = LED(17) 
-fail_led = LED(16)
-buzzer = Buzzer(21)
+# Feedback Pins (Moved successLed to avoid GPIO 17 conflict)
+SUCCESS_LED = 23 
+FAIL_LED    = 16
+BUZZER      = 21
 
-# If the motor is actually on Pin 23 instead of 17:
-fan = Motor(forward=27, backward=23, enable=22)
+def init_gpio():
+    """Run this once at start to prevent motor jitter"""
+    pins = [ENABLE_PIN, INPUT1, INPUT2, SUCCESS_LED, FAIL_LED, BUZZER]
+    for pin in pins:
+        GPIO.setup(pin, GPIO.OUT)
+        GPIO.output(pin, GPIO.LOW)
 
-def success():
-    success_led.on()
-    sleep(1)
-    success_led.off()
+def spinMotor():
+    """Turns on the fan in a forward direction"""
+    print("🌀 Fan: Starting (Forward)")
+    GPIO.output(INPUT1, GPIO.HIGH)
+    GPIO.output(INPUT2, GPIO.LOW)
+    GPIO.output(ENABLE_PIN, GPIO.HIGH) # Enable the bridge
 
-def failure():
-    print("Failure detected!")
-    fail_led.on()
-    buzzer.on()
-    print("Buzzer On")
-    sleep(1)
-    fail_led.off()
-    buzzer.off()
-    print("Buzzer Off")
+def stopMotor():
+    """Cuts power to the motor immediately"""
+    print("🛑 Fan: Stopping")
+    # Setting Enable to LOW is the safest way to cut power on an L293D
+    GPIO.output(ENABLE_PIN, GPIO.LOW)
+    GPIO.output(INPUT1, GPIO.LOW)
+    GPIO.output(INPUT2, GPIO.LOW)
 
-def spin_motor():
-    print("Turning on fan")
-    fan.forward() # Sets 27 High, 17 Low, and 22 High
-
-def stop_motor():
-    print("Stopping fan")
-    fan.stop() # Sets all motor pins Low
-
-def cleanup():
-    # gpiozero handles cleanup automatically when the script exits,
-    # but you can manually close devices if needed.
-    success_led.close()
-    fail_led.close()
-    buzzer.close()
-    fan.close()
+# Initialize on import
+init_gpio()
