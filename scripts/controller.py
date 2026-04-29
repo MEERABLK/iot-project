@@ -1,6 +1,6 @@
 # controller.py
 from scripts.sensor_data import data, start as start_mqtt
-from scripts import gpio_controller
+# from scripts import gpio_controller
 from scripts import send_email
 # import index
 import threading
@@ -38,6 +38,13 @@ class Controller:
         self.thresholds = {
             "fridge1": 8,
             "fridge2": 8
+        }
+
+        self.msp01_data = {
+            "temp": 0, 
+            "hum": 0, 
+            "battery": 0, 
+            "status": "Offline"
         }
 
         # ⚙️ Hardware Controls
@@ -383,7 +390,7 @@ class Controller:
                 # ===== CHECK FOR REPLY =====
                 elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
                     print("🔥 Turning ON fan")
-                    gpio_controller.spinMotor()
+                    # gpio_controller.spinMotor()
                     self.toggle_on(1)
                     self.toggle_on(2)
                     time.sleep(5)
@@ -400,6 +407,12 @@ class Controller:
 
             time.sleep(5)
 
+    def get_ambient_data(self):
+        with self.lock:
+            print("bluetooth sensor")
+            print(self.msp01_data)
+            return self.msp01_data
+        
     # 👇 functions GUI can call
     def get_fridge1_temp(self):
         return self.data.fridge1Temperature

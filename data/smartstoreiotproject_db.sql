@@ -27,12 +27,12 @@ SET time_zone = "+00:00";
 -- Table structure for table `admins`
 --
 
-CREATE TABLE `admins` (
+CREATE TABLE IF NOT EXISTS `admins` (
   `admin_id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -40,7 +40,7 @@ CREATE TABLE `admins` (
 -- Table structure for table `ble_sensor_logs`
 --
 
-CREATE TABLE `ble_sensor_logs` (
+CREATE TABLE IF NOT EXISTS `ble_sensor_logs` (
   `log_id` int(11) NOT NULL,
   `sensor_name` varchar(50) DEFAULT NULL,
   `temperature` decimal(5,2) DEFAULT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE `ble_sensor_logs` (
   `light_level` int(11) DEFAULT NULL,
   `motion_detected` tinyint(1) DEFAULT 0,
   `recorded_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -56,7 +56,7 @@ CREATE TABLE `ble_sensor_logs` (
 -- Table structure for table `customers`
 --
 
-CREATE TABLE `customers` (
+CREATE TABLE IF NOT EXISTS `customers` (
   `customer_id` int(11) NOT NULL,
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
@@ -89,7 +89,7 @@ INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `pho
 -- Table structure for table `inventory`
 --
 
-CREATE TABLE `inventory` (
+CREATE TABLE IF NOT EXISTS `inventory` (
   `inventory_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL DEFAULT 0,
@@ -102,7 +102,7 @@ CREATE TABLE `inventory` (
 -- Table structure for table `products`
 --
 
-CREATE TABLE `products` (
+CREATE TABLE IF NOT EXISTS `products` (
   `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `category` varchar(50) DEFAULT NULL,
@@ -163,7 +163,7 @@ INSERT INTO `product_upc` (`upc_id`, `product_id`, `upc_code`) VALUES
 -- Table structure for table `receipts`
 --
 
-CREATE TABLE `receipts` (
+CREATE TABLE IF NOT EXISTS `receipts` (
   `receipt_id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
   `total` decimal(10,2) DEFAULT NULL,
@@ -171,7 +171,7 @@ CREATE TABLE `receipts` (
   `created_at` datetime DEFAULT current_timestamp(),
   `payment_method` varchar(50) DEFAULT 'SIMULATION',
   `status` varchar(20) DEFAULT 'completed'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `receipts`
@@ -189,13 +189,47 @@ INSERT INTO `receipts` (`receipt_id`, `customer_id`, `total`, `points_earned`, `
 -- Table structure for table `receipt_items`
 --
 
-CREATE TABLE `receipt_items` (
+CREATE TABLE IF NOT EXISTS `receipt_items` (
   `item_id` int(11) NOT NULL,
   `receipt_id` int(11) DEFAULT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
   `subtotal` decimal(10,2) GENERATED ALWAYS AS (`quantity` * `price`) STORED
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `receipt_items`
+--
+
+INSERT INTO `receipt_items` (`item_id`, `receipt_id`, `product_id`, `quantity`, `price`) VALUES
+(1, 1, 4, 5, 24.99),
+(2, 1, 5, 1, 24.99),
+(3, 1, 3, 1, 15.00),
+(4, 2, 4, 7, 24.99),
+(5, 2, 5, 1, 24.99),
+(6, 3, 4, 2, 24.99),
+(7, 4, 4, 2, 24.99),
+(8, 5, 4, 1, 24.99),
+(9, 5, 3, 1, 15.00),
+(10, 6, 4, 4, 24.99),
+(17, 9, 5, 1, 24.99),
+(18, 9, 4, 1, 24.99),
+(19, 10, 5, 3, 24.99),
+(20, 11, 4, 3, 24.99),
+(21, 12, 4, 1, 24.99),
+(22, 13, 4, 5, 24.99),
+(23, 14, 6, 1, 5.00),
+(24, 14, 5, 1, 24.99),
+(25, 14, 3, 1, 15.00),
+(26, 15, 6, 2, 5.00),
+(27, 15, 3, 1, 15.00),
+(28, 15, 5, 1, 24.99),
+(29, 15, 4, 1, 24.99),
+(30, 16, 4, 1, 25.00),
+(31, 16, 6, 1, 5.00),
+(32, 16, 3, 1, 15.00),
+(33, 16, 5, 1, 25.00);
 ) ;
 
 -- --------------------------------------------------------
@@ -204,7 +238,7 @@ CREATE TABLE `receipt_items` (
 -- Table structure for table `receptions`
 --
 
-CREATE TABLE `receptions` (
+CREATE TABLE IF NOT EXISTS `receptions` (
   `reception_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity_received` int(11) DEFAULT NULL,
@@ -219,7 +253,7 @@ CREATE TABLE `receptions` (
 -- Table structure for table `report_exports`
 --
 
-CREATE TABLE `report_exports` (
+CREATE TABLE IF NOT EXISTS `report_exports` (
   `export_id` int(11) NOT NULL,
   `report_type` varchar(50) DEFAULT NULL,
   `exported_by` varchar(50) DEFAULT NULL,
@@ -233,7 +267,7 @@ CREATE TABLE `report_exports` (
 -- Table structure for table `stock_thresholds`
 --
 
-CREATE TABLE `stock_thresholds` (
+CREATE TABLE IF NOT EXISTS `stock_thresholds` (
   `threshold_id` int(11) NOT NULL,
   `category` varchar(50) NOT NULL,
   `min_quantity` int(11) NOT NULL DEFAULT 5
@@ -256,11 +290,11 @@ CREATE TABLE `suppliers` (
 -- Table structure for table `thresholds`
 --
 
-CREATE TABLE `thresholds` (
+CREATE TABLE IF NOT EXISTS `thresholds` (
   `id` int(11) NOT NULL,
   `fridge_name` varchar(50) DEFAULT NULL,
   `temperature_threshold` float DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `thresholds`

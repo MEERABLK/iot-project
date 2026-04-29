@@ -57,6 +57,7 @@ button {
     border: none;
     color: white;
 }
+
 .alert {
     padding: 10px;
     border: 1px solid transparent;
@@ -138,6 +139,12 @@ button {
     transition: 0.2s ease;
 }
 
+.button > h1,
+.button > h2,
+.button > h3 {
+    color: white;
+}
+
 .button-square {
     height: 150px;
     width: 150px;
@@ -150,6 +157,15 @@ button {
     left: 15px;
     width: 50px;
     aspect-ratio: 1/1;
+
+    border-radius: 50px;
+}
+
+.button-top-right {
+    position: absolute;
+    flex: 0;
+    top: 15px;
+    right: 15px;
 
     border-radius: 50px;
 }
@@ -279,4 +295,72 @@ button {
     color: #721c24;
     border: 1px solid #f5c6cb;
     display: block;
+}
+
+/* PDF */
+.pdf-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 96px 0;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.pdf {
+    display: block;
+    background-color: white;
+    font-family: monospace;
+    color: black;
+    padding: 96px;
+    width: 8.5in;
+    margin: 0;
+}
+
+.pdf h1,
+.pdf h2,
+.pdf h3,
+.pdf p {
+    text-align: left;
+    padding-left: 96px;
+    color: black;
+}
+
+.pdf h1 {
+    font-size: 2em;
+}
+
+.pdf h2 {
+    font-size: 1.5em;
+}
+
+.pdf h3 {
+    font-size: 1.17em;
+}
+
+.pdf p {
+    font-size: 1em;
+}
+
+.pdf p {
+    padding: 8px;
+}
+
+.pdf table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.pdf th {
+  background-color: black;
+  color: white;
+  font-weight: bold;
+  padding: 8px;
+  border: 1px solid black;
+}
+
+.pdf td {
+  background-color: white;
+  color: black;
+  padding: 8px;
+  border: 1px solid black;
 }

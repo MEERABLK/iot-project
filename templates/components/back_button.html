@@ -1,3 +1,3 @@
-<a href="{{ url_for('index') }}" class="button button-back">
+<a href="{{ url | d(url_for('index')) }}" class="button button-back">
     <div class="arrow"></div>
 </a>
