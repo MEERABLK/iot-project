@@ -204,7 +204,57 @@ def get_receipt_items(receipt_id):
 
     except mysql.connector.Error as err:
         print(f"🚨 Database Error fetching receipt items: {err}")
-        return []   
+        return []
+    
+def get_receipt_history(customer_id):
+    try:
+        mydb = mysql.connector.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database="smartstoreiotproject_db"
+        )
+        cursor = mydb.cursor(dictionary=True)
+        
+        cursor.execute("SELECT receipt_id as id, total, points_earned, created_at as date, payment_method FROM receipts WHERE customer_id = %s", (customer_id,))
+        info = cursor.fetchall()
+
+        receipt_ids = [i['id'] for i in info]
+
+        if not receipt_ids:
+            return []
+        
+        ids_string = ','.join(['%s'] * len(receipt_ids))
+
+        cursor.execute(f"SELECT r.receipt_id, p.name, r.quantity as qty, r.price, r.subtotal FROM receipt_items r INNER JOIN products p ON r.product_id = p.product_id WHERE r.receipt_id IN ({ids_string})", tuple(receipt_ids))
+        all_lines = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        receipt_map = {i['id']: i for i in info}
+
+        for i_id in receipt_map:
+            receipt_map[i_id]['lines'] = []
+
+        for line in all_lines:
+            r_id = line['receipt_id']
+            if r_id in receipt_map:
+                receipt_map[r_id]['lines'].append(line)
+
+        receipt_list = list(receipt_map.values())
+
+        for receipt in receipt_list:
+            receipt['formatted_lines'] = []
+            for line in receipt['lines']:
+                f_line = f"{line['name'][:24]:<25} {line['qty']:>5} {line['price']:>10.2f} {line['subtotal']:>12.2f}"
+                receipt['formatted_lines'].append(f_line)
+
+        return receipt_list
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching receipt history: {err}")
+        return []
 
 def add_product(name, category, price, upc_code, epc, producer, quantity, image):
     conn = get_connection()

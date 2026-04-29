@@ -27,12 +27,12 @@ SET time_zone = "+00:00";
 -- Table structure for table `admins`
 --
 
-CREATE TABLE `admins` (
+CREATE TABLE IF NOT EXISTS `admins` (
   `admin_id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -40,7 +40,7 @@ CREATE TABLE `admins` (
 -- Table structure for table `ble_sensor_logs`
 --
 
-CREATE TABLE `ble_sensor_logs` (
+CREATE TABLE IF NOT EXISTS `ble_sensor_logs` (
   `log_id` int(11) NOT NULL,
   `sensor_name` varchar(50) DEFAULT NULL,
   `temperature` decimal(5,2) DEFAULT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE `ble_sensor_logs` (
   `light_level` int(11) DEFAULT NULL,
   `motion_detected` tinyint(1) DEFAULT 0,
   `recorded_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -56,7 +56,7 @@ CREATE TABLE `ble_sensor_logs` (
 -- Table structure for table `customers`
 --
 
-CREATE TABLE `customers` (
+CREATE TABLE IF NOT EXISTS `customers` (
   `customer_id` int(11) NOT NULL,
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE `customers` (
   `points` int(11) DEFAULT 0,
   `password` varchar(255) NOT NULL,
   `username` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `customers`
@@ -92,12 +92,12 @@ INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `pho
 -- Table structure for table `inventory`
 --
 
-CREATE TABLE `inventory` (
+CREATE TABLE IF NOT EXISTS `inventory` (
   `inventory_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT 0,
   `last_updated` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -105,7 +105,7 @@ CREATE TABLE `inventory` (
 -- Table structure for table `products`
 --
 
-CREATE TABLE `products` (
+CREATE TABLE IF NOT EXISTS `products` (
   `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `category` varchar(50) DEFAULT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE `products` (
   `producer` varchar(100) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
   `quantity` int(11) NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `products`
@@ -134,7 +134,7 @@ INSERT INTO `products` (`product_id`, `name`, `category`, `price`, `upc`, `produ
 -- Table structure for table `receipts`
 --
 
-CREATE TABLE `receipts` (
+CREATE TABLE IF NOT EXISTS `receipts` (
   `receipt_id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
   `total` decimal(10,2) DEFAULT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE `receipts` (
   `created_at` datetime DEFAULT current_timestamp(),
   `payment_method` varchar(50) DEFAULT 'SIMULATION',
   `status` varchar(20) DEFAULT 'completed'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `receipts`
@@ -170,14 +170,14 @@ INSERT INTO `receipts` (`receipt_id`, `customer_id`, `total`, `points_earned`, `
 -- Table structure for table `receipt_items`
 --
 
-CREATE TABLE `receipt_items` (
+CREATE TABLE IF NOT EXISTS `receipt_items` (
   `item_id` int(11) NOT NULL,
   `receipt_id` int(11) DEFAULT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
   `subtotal` decimal(10,2) GENERATED ALWAYS AS (`quantity` * `price`) STORED
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `receipt_items`
@@ -218,13 +218,13 @@ INSERT INTO `receipt_items` (`item_id`, `receipt_id`, `product_id`, `quantity`, 
 -- Table structure for table `receptions`
 --
 
-CREATE TABLE `receptions` (
+CREATE TABLE IF NOT EXISTS `receptions` (
   `reception_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity_received` int(11) DEFAULT NULL,
   `date_received` datetime DEFAULT current_timestamp(),
   `supplier` varchar(100) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -232,13 +232,13 @@ CREATE TABLE `receptions` (
 -- Table structure for table `report_exports`
 --
 
-CREATE TABLE `report_exports` (
+CREATE TABLE IF NOT EXISTS `report_exports` (
   `export_id` int(11) NOT NULL,
   `report_type` varchar(50) DEFAULT NULL,
   `exported_by` varchar(50) DEFAULT NULL,
   `export_format` enum('PDF','CSV','PNG') DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -246,10 +246,10 @@ CREATE TABLE `report_exports` (
 -- Table structure for table `rfid_tags`
 --
 
-CREATE TABLE `rfid_tags` (
-  `upc` text NOT NULL,
-  `epc` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+CREATE TABLE IF NOT EXISTS `rfid_tags` (
+  `upc` varchar(12) NOT NULL,
+  `epc` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -257,11 +257,11 @@ CREATE TABLE `rfid_tags` (
 -- Table structure for table `stock_thresholds`
 --
 
-CREATE TABLE `stock_thresholds` (
+CREATE TABLE IF NOT EXISTS `stock_thresholds` (
   `threshold_id` int(11) NOT NULL,
   `category` varchar(50) DEFAULT NULL,
   `min_quantity` int(11) NOT NULL DEFAULT 5
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -269,11 +269,11 @@ CREATE TABLE `stock_thresholds` (
 -- Table structure for table `thresholds`
 --
 
-CREATE TABLE `thresholds` (
+CREATE TABLE IF NOT EXISTS `thresholds` (
   `id` int(11) NOT NULL,
   `fridge_name` varchar(50) DEFAULT NULL,
   `temperature_threshold` float DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `thresholds`
@@ -365,7 +365,7 @@ ALTER TABLE `report_exports`
 -- Indexes for table `rfid_tags`
 --
 ALTER TABLE `rfid_tags`
-  ADD UNIQUE KEY `rfid_unique` (`epc`) USING HASH;
+  ADD UNIQUE KEY `rfid_unique` (`epc`);
 
 --
 -- Indexes for table `stock_thresholds`

@@ -1,0 +1,32 @@
+{% extends "components/base.html" %}
+
+{% block title %}Receipt History{% endblock %}
+
+{% block content %}
+<body>
+    {% with url=url_for('checkout') %}
+        {% include 'components/back_button.html' %}
+    {% endwith %}
+
+    <div id="pdf" class="pdf">
+        <h1>Receipt History</h1>
+        <p>
+        {% for receipt in receipts %}
+            ================================<br>
+            TRANSACTION DATE: {{ receipt.date }}<br>
+            --------------------------------<br>
+            DESCRIPTION               QTY      PRICE    SUBTOTAL<br>
+            --------------------------------<br>
+            {% for line in receipt.formatted_lines %}
+                {{ line }}<br>
+            {% endfor %}
+            --------------------------------<br>
+            TOTAL: {{ receipt.total }}<br>
+            ================================<br><br>
+        {% endfor %}
+        </p>
+    </div>
+    
+</body>
+
+{% endblock %}

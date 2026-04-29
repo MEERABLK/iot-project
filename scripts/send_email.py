@@ -18,7 +18,7 @@ from email.header import decode_header
 import time
 
 from db.database import get_threshold
-import scripts.gpio_controller as gpio_controller
+# import scripts.gpio_controller as gpio_controller
 
 
 # =========================
@@ -149,11 +149,11 @@ if __name__ == "__main__":
         if check_reply_to_test_subject(EMAIL, PASSWORD):
             print("🔥 TURNING FAN ON...")
 
-            gpio_controller.spinMotor()
+            # gpio_controller.spinMotor()
 
             time.sleep(5)
 
-            gpio_controller.stopMotor()
+            # gpio_controller.stopMotor()
 
             break
 

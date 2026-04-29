@@ -1,6 +1,6 @@
 # controller.py
 from scripts.sensor_data import data, start as start_mqtt
-from scripts import gpio_controller
+# from scripts import gpio_controller
 from scripts import send_email
 # import index
 import threading
@@ -412,11 +412,11 @@ class Controller:
                 # ===== CHECK FOR REPLY =====
                 elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
                     print("🔥 Turning ON fan")
-                    gpio_controller.spinMotor()
+                    # gpio_controller.spinMotor()
                     self.toggle_on(1)
                     self.toggle_on(2)
                     time.sleep(5)
-                    gpio_controller.stopMotor()
+                    # gpio_controller.stopMotor()
                     # self.toggle_off(1)
                     # self.toggle_off(2)
                     

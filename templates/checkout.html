@@ -30,6 +30,15 @@
         text-align: right;
     }
 </style>
+
+{% with url=url_for('logout') %}
+    {% include 'components/back_button.html' %}
+{% endwith %}
+
+<a href="{{ url_for('client_receipt_history') }}" class="button button-top-right">
+    <h3>History</h3>
+</a>
+
 <div class="container">
     <h2>Your Cart</h2>
     
