@@ -8,6 +8,9 @@ from scripts.controller import Controller
 import scripts.gpio_controller as gpio
 import db.database as data
 import time
+from pathlib import Path
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(env_path)
 
 app = Flask(__name__)
 app.secret_key = "iot_vanier_1"
@@ -23,7 +26,7 @@ def toggle_off(id):
 
 controller = Controller(toggle_on, toggle_off)
 
-load_dotenv(".env")
+# load_dotenv(".env")
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
