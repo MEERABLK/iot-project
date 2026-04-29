@@ -139,6 +139,12 @@ button {
     transition: 0.2s ease;
 }
 
+.button > h1,
+.button > h2,
+.button > h3 {
+    color: white;
+}
+
 .button-square {
     height: 150px;
     width: 150px;
@@ -292,17 +298,30 @@ button {
 }
 
 /* PDF */
+.pdf-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 96px 0;
+    width: 100%;
+    min-height: 100vh;
+}
+
 .pdf {
     display: block;
     background-color: white;
+    font-family: monospace;
     color: black;
-    padding: 96px
+    padding: 96px;
+    width: 8.5in;
+    margin: 0;
 }
 
 .pdf h1,
 .pdf h2,
 .pdf h3,
 .pdf p {
+    text-align: left;
+    padding-left: 96px;
     color: black;
 }
 
