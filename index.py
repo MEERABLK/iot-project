@@ -138,11 +138,14 @@ def admin_inv_report():
 
 @app.route('/admin/sales-report')
 def admin_sales_report():
-
-    return render_template('admin_sales_report.html')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    items = data.get_items_by_date(start_date, end_date)
+    return render_template('admin_sales_report.html', items = items, start_date = start_date, end_date = end_date)
 
 @app.route('/admin/customer-report')
 def admin_customer_report():
+
     return render_template('admin_customer_report.html')
 
 @app.route('/products', methods=['GET'])

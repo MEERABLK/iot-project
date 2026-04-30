@@ -22,17 +22,17 @@
                     <tr>
                         <th>Product ID</th>
                         <th>Product Name</th>
-                        <th>Available Quantity</th>
-                        <th>Last Restocked</th>
+                        <th>Quantity Sold</th>
+                        <th>Period</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for product in products %}
+                    {% for item in items %}
                     <tr>
-                        <td>{{ product.id }}</td>
-                        <td>{{ product.name }}</td>
-                        <td>{{ product.qty }}</td>
-                        <td>{{ product.last_updated }}</td>
+                        <td>{{ item.id }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.sold }}</td>
+                        <td>{{ start_date }} - {{ end_date }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

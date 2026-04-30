@@ -70,17 +70,24 @@
 
     <div class="collection collection-shade-3 collection-vertical">
         <h3>Reports</h3>
-        <div class="collection collection-shade-2">
-            <a href="{{ url_for('admin_inv_report') }}" class="button">
-                Inventory Report
-            </a>
-            <a href="{{ url_for('admin_sales_report') }}" class="button">
-                Sales Report
-            </a>
-            <a href="{{ url_for('admin_customer_report') }}" class="button">
-                Customer Activity Report
-            </a>
-        </div>
+        <form method="get">
+            <div class="collection collection-shade-1">
+                <input type="date" id="start_date" name="start_date">
+                <input type="date" id="end_date" name="end_date">
+            </div>
+            <div class="collection collection-shade-2">
+                <button type="submit" formaction="{{ url_for('admin_inv_report') }}" class="button">
+                    Inventory Report
+                </button>
+                <button type="submit" formaction="{{ url_for('admin_sales_report') }}" class="button">
+                    Sales Report
+                </button>
+                <button type="submit"  formaction="{{ url_for('admin_customer_report') }}" class="button">
+                    Customer Activity Report
+                </button>
+            </div>
+        </form>
+        
     </div>
 </div>
 

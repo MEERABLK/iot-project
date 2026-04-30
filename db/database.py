@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 load_dotenv()  # loads variables from .env
 import re
+from datetime import datetime
 
 print("DEBUG: Database file loaded successfully!")
 
@@ -362,18 +363,25 @@ def get_items_by_date(start_date, end_date):
         mydb = get_connection()
         cursor = mydb.cursor(dictionary=True)
         
-        query = "SELECT p.name, sum(r.quantity) as sold, r.created_at FROM receipt_items r JOIN products p ON r.product_id = p.product_id WHERE 1 = 1"
+        query = """
+            SELECT p.product_id as id, p.name, SUM(r.quantity) as sold 
+            FROM receipt_items r 
+            JOIN products p ON r.product_id = p.product_id
+            JOIN receipts rec ON r.receipt_id = rec.receipt_id
+            WHERE 1=1
+        """
         params = []
 
+        # 2. Filter using the 'rec' alias (the receipts table)
         if is_valid_date(start_date):
-            query += " AND receipt_id IN (SELECT receipt_id FROM receipts WHERE created_at >= %s)"
+            query += " AND rec.created_at >= %s"
             params.append(start_date)
 
         if is_valid_date(end_date):
-            query += " AND receipt_id IN (SELECT receipt_id FROM receipts WHERE created_at <= %s)"
+            query += " AND rec.created_at <= %s"
             params.append(end_date)
 
-        query += " GROUP BY product_id"
+        query += " GROUP BY p.product_id, p.name"
         
         cursor.execute(query, params)
         results = cursor.fetchall()
