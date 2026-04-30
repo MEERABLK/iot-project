@@ -9,12 +9,17 @@ from dotenv import load_dotenv
 import os
 from db import database
 from scripts.rfid_reader import get_rfid_tags
+from pathlib import Path
+from dotenv import load_dotenv
+import os
 
-load_dotenv(".env")
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env", override=True)
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
+print("LOADED EMAIL:", EMAIL_ADDRESS)
 
 
 
@@ -25,8 +30,10 @@ class Controller:
         self.email_password = EMAIL_PASSWORD
         self.last_email_time = time.time()
         self.fridge1_alert_sent = False
-
+        self.checkout_locked = False
+        # self.checkout_mode = False
         # 🌡️ Sensor & Threshold Data
+        self.state = "SHOPPING"
         self.data = data
         self.thresholds = {
             "fridge1": 8,
@@ -70,22 +77,23 @@ class Controller:
     def _rfid_background_task(self):
         """Syncs the controller state and the cart with the physical scanner."""
         for current_tags in get_rfid_tags():
+            
+            if self.checkout_locked:
+                time.sleep(0.5)
+                continue
+
             with self.lock:
                 self.rfid_tags = current_tags
 
             # 1. Handle newly detected tags
             for tag_epc in current_tags:
-                if tag_epc not in self.cart_check_list:
-                    # Capture the result of the handle_tag call
-                    result = self._handle_tag(tag_epc)
-                    
-                    # ONLY add to the check_list if it's a valid product
-                    # If it returns an error dict (unknown_tag), don't block it here
-                    if result and "error" not in result:
-                        self.cart_check_list.add(tag_epc)
-                    else:
-                        # Log that it's being ignored for now or handled as unknown
-                        print(f"DEBUG: Tag {tag_epc} is unknown/invalid. Not adding to checklist.")
+                if tag_epc in self.scanned_epcs:
+                   continue
+
+                result = self._handle_tag(tag_epc)
+
+                if result and "error" not in result:
+                    self.scanned_epcs.add(tag_epc)
 
             # 2. REMOVAL: Handle tags no longer on the scanner
             for tag_epc in list(self.cart_check_list):
@@ -96,6 +104,8 @@ class Controller:
 
     #===core logic===
     def _handle_tag(self, tag_epc):
+        if self.state != "SHOPPING":
+            return None
         try:
             # 1. Safety check for the database attribute and perform lookup
             # This prevents the "module has no attribute" crash
@@ -133,10 +143,14 @@ class Controller:
             pid = product.get('product_id')
             name = product.get('name', 'Unknown Item')
             price = float(product.get('price', 0.0))
-
+            
             with self.lock:
                 if pid in self.cart:
-                    self.cart[pid]['qty'] += 1
+                   # prevent accidental double increment within same second
+                   if time.time() - self.cart[pid].get("last_added", 0) < 1:
+                       return product
+                   self.cart[pid]['qty'] += 1
+                   self.cart[pid]['last_added'] = time.time()
                 else:
                     self.cart[pid] = {
                         "name": name,
@@ -189,7 +203,7 @@ class Controller:
             with self.lock:
                 self.cart = {}
                 self.cart_check_list.clear()
-            
+                self.scanned_epcs.clear()
             print(f"📄 Receipt #{receipt_id} stored in controller memory.")
             return self.last_receipt
         
@@ -228,19 +242,29 @@ class Controller:
 
         # 3. Send via existing send_email script
         try:
+            print("Sending to:", customer_email)
+            print("Sender:", self.email_address)
+            print("Password exists:", self.email_password is not None)
+
             send_email.send_email(
-                subject=f"Your SmartStore Receipt #{receipt_id} 🛒",
+                subject=f"Your SmartStore Receipt #{receipt_id}",
                 body=body,
                 sender=self.email_address,
                 recipients=[customer_email],
                 password=self.email_password
             )
-            print(f"📧 Receipt #{receipt_id} emailed to {customer_email}")
+
+            print("EMAIL SENT SUCCESS")
+
         except Exception as e:
-            print(f"🚨 Failed to send receipt email: {e}")
+            print("EMAIL FAILED:", str(e))
 
     # === Barcode Logic ===
     def add_by_barcode(self, upc):
+       
+        if self.checkout_locked:
+            print("⛔ Barcode ignored (checkout locked)")
+            return None
         """
         Manually adds an item to the cart using its barcode/UPC.
         """
@@ -328,54 +352,8 @@ class Controller:
             # modify the live data used by the background threads.
             return dict(self.cart)
         
-    def process_final_checkout(self, customer_id, discount_percent):
-        try:
-            if not self.cart:
-                print("⚠️ Checkout failed: Cart is empty.")
-                return None
 
-            # 1. Save to DB (returns the integer ID)
-            from db import database as data
-            receipt_id = data.create_receipt(customer_id, self.cart, discount_percent)
-
-            if receipt_id:
-                # --- NEW: Internal Hand-off for Emailing ---
-                # 2. Fetch the items back from the DB so we have subtotals/names
-                receipt_items = data.get_receipt_items(receipt_id)
-                
-                # 3. Store in the exact format send_receipt expects
-                self.last_receipt = {
-                    "receipt_id": receipt_id,
-                    "items": receipt_items,
-                    "customer_id": customer_id
-                }
-                # ------------------------------------------
-
-                # 4. Clear the cart state
-                with self.lock:
-                    self.cart = {}
-                    # Clear any other tracking lists you have
-                    if hasattr(self, 'cart_check_list'):
-                        self.cart_check_list.clear()
-                
-                # 5. Notify frontend
-                if hasattr(self, 'socketio'):
-                    self.socketio.emit('cart_updated', {'cart': {}, 'total': 0})
-                
-                with self.lock:
-                    self.cart = {}
-                    self.scanned_epcs.clear() # 👈 Clear physical tag history
-                print(f"✅ Controller: Checkout finalized for Receipt #{receipt_id}")
-                return receipt_id
-            else:
-                return None
-
-        except Exception as e:
-            print(f"🚨 Controller Error during checkout: {e}")
-            return None
-
-    def get_cart(self):
-        return self.cart
+    
     
     def _background_tasks(self):
         threshold = 19
@@ -547,7 +525,48 @@ class Controller:
             # Get threshold for a specific fridge
     def get_threshold(self, fridge_name):
         return self.thresholds.get(fridge_name, 8)
+    def lock_checkout(self):
+        print("🔒 CHECKOUT LOCKED - NO SCANS ALLOWED")
+        self.checkout_locked = True
 
-# Update threshold for a specific fridge
-    def set_threshold(self, fridge_name, value):
-        self.thresholds[fridge_name] = value
+    def unlock_checkout(self):
+        print("🔓 CHECKOUT UNLOCKED")
+        self.checkout_locked = False
+
+    def process_final_checkout(self, customer_id, discount_percent=0):
+
+        self.lock_checkout()
+
+        try:
+            current_cart = self.get_cart()
+
+            if not current_cart:
+                return None
+
+            receipt_id = database.create_receipt(
+                customer_id,
+                current_cart,
+                discount_percent
+            )
+
+            if not receipt_id:
+                return None
+
+            receipt_items = database.get_receipt_items(receipt_id)
+
+            self.last_receipt = {
+                "receipt_id": receipt_id,
+                "items": receipt_items,
+                "customer_id": customer_id,
+                "timestamp": time.time()
+            }
+
+            with self.lock:
+                self.cart.clear()
+                self.cart_check_list.clear()
+                self.scanned_epcs.clear()
+
+            return receipt_id
+
+        finally:
+            self.unlock_checkout()

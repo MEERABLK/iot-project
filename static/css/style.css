@@ -301,7 +301,6 @@ button {
 .pdf-wrapper {
     display: flex;
     justify-content: center;
-    padding: 96px 0;
     width: 100%;
     min-height: 100vh;
 }
@@ -311,9 +310,13 @@ button {
     background-color: white;
     font-family: monospace;
     color: black;
-    padding: 96px;
+    padding: 0 64px;
     width: 8.5in;
     margin: 0;
+}
+
+.pdf pre {
+    padding-top: 64px;
 }
 
 .pdf h1,

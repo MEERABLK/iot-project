@@ -109,41 +109,124 @@ def add_customer(first, last, email, phone, address, city, province, postal_code
 # checkout function
 def create_receipt(customer_id, cart, discount_percent=0.0):
     try:
-        db = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
-        cursor = db.cursor()
+        db = get_connection()
+        cursor = db.cursor(dictionary=True)
 
-        # Calculate totals
-        raw_total = sum(item['price'] * item['qty'] for item in cart.values())
+        # ===============================
+        # 1. CHECK STOCK FIRST
+        # ===============================
+        for pid, item in cart.items():
+
+            cursor.execute("""
+                SELECT quantity
+                FROM inventory
+                WHERE product_id = %s
+            """, (pid,))
+
+            stock = cursor.fetchone()
+
+            if not stock:
+                print(f"❌ Product {pid} not found in inventory")
+                db.rollback()
+                return None
+
+            available = stock['quantity']
+
+            if item['qty'] > available:
+                print(f"❌ Not enough stock for product {pid}")
+                db.rollback()
+                return None
+
+        # ===============================
+        # 2. CALCULATE TOTAL
+        # ===============================
+        raw_total = sum(
+            item['price'] * item['qty']
+            for item in cart.values()
+        )
+
         final_total = raw_total * (1 - discount_percent)
-        
-        # Define the variable clearly here
-        points_to_add = int(final_total) 
 
-        # 1. Insert receipt
-        cursor.execute(
-            "INSERT INTO receipts (customer_id, total, points_earned) VALUES (%s, %s, %s)",
-            (customer_id, final_total, points_to_add)
-        )
+        points_to_add = int(final_total)
+
+        # ===============================
+        # 3. CREATE RECEIPT
+        # ===============================
+        cursor.execute("""
+            INSERT INTO receipts
+            (customer_id, total, points_earned)
+            VALUES (%s, %s, %s)
+        """, (
+            customer_id,
+            final_total,
+            points_to_add
+        ))
+
         receipt_id = cursor.lastrowid
 
-        # 2. Update customer's total points 
-        # Use 'points_to_add' here so it matches the variable above!
-        cursor.execute(
-            "UPDATE customers SET points = points + %s WHERE customer_id = %s",
-            (points_to_add, customer_id)
-        )
+        # ===============================
+        # 4. UPDATE CUSTOMER POINTS
+        # ===============================
+        cursor.execute("""
+            UPDATE customers
+            SET points = points + %s
+            WHERE customer_id = %s
+        """, (
+            points_to_add,
+            customer_id
+        ))
 
-        # 3. Insert items
+        # ===============================
+        # 5. SAVE ITEMS + REDUCE STOCK + REMOVE RFID TAGS
+        # ===============================
         for pid, item in cart.items():
-            cursor.execute(
-                "INSERT INTO receipt_items (receipt_id, product_id, quantity, price) VALUES (%s, %s, %s, %s)",
-                (receipt_id, pid, item['qty'], item['price'])
-            )
+
+            qty = item['qty']
+            price = item['price']
+
+            # receipt item
+            cursor.execute("""
+                INSERT INTO receipt_items
+                (receipt_id, product_id, quantity, price)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                receipt_id,
+                pid,
+                qty,
+                price
+            ))
+
+            # reduce inventory
+            cursor.execute("""
+                UPDATE inventory
+                SET quantity = quantity - %s
+                WHERE product_id = %s
+            """, (
+                qty,
+                pid
+            ))
+
+            # get RFID tags to remove
+            cursor.execute("""
+                SELECT epc_code
+                FROM product_rfid
+                WHERE product_id = %s
+                LIMIT %s
+            """, (
+                pid,
+                qty
+            ))
+
+            tags = cursor.fetchall()
+
+            # delete purchased RFID tags
+            for tag in tags:
+                cursor.execute("""
+                    DELETE FROM product_rfid
+                    WHERE epc_code = %s
+                """, (
+                    tag['epc_code'],
+                ))
 
         db.commit()
         cursor.close()
@@ -152,7 +235,7 @@ def create_receipt(customer_id, cart, discount_percent=0.0):
         return receipt_id
 
     except Exception as e:
-        print("Checkout Error:", e) # This is where 'name points is not defined' was coming from
+        print("Checkout Error:", e)
         return None
 
 def get_user_points(customer_id):
@@ -256,36 +339,32 @@ def get_receipt_history(customer_id):
         print(f"🚨 Database Error fetching receipt history: {err}")
         return []
 
-def add_product(name, category, price, upc_code, epc, producer, quantity, image):
+def add_product(name, category, price, upc_code, producer, quantity, image):
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
-        # 1. Insert into products (NO UPC/EPC HERE)
         cursor.execute("""
             INSERT INTO products (name, category, price, producer, image)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s,%s,%s,%s,%s)
         """, (name, category, price, producer, image))
 
-        product_id = cursor.lastrowid  # 👈 IMPORTANT
+        product_id = cursor.lastrowid
 
-        # 2. Insert UPC (barcode + quantity)
         cursor.execute("""
-            INSERT INTO product_upc (product_id, upc_code, quantity)
-            VALUES (%s, %s, %s)
-        """, (product_id, upc_code, quantity))
+            INSERT INTO product_upc (product_id, upc_code)
+            VALUES (%s,%s)
+        """, (product_id, upc_code))
 
-        # 3. Insert RFID (EPC = one item)
-        if epc:
-            cursor.execute("""
-                INSERT INTO product_rfid (product_id, epc_code)
-                VALUES (%s, %s)
-            """, (product_id, epc))
+        cursor.execute("""
+            INSERT INTO inventory (product_id, quantity)
+            VALUES (%s,%s)
+        """, (product_id, quantity))
 
         conn.commit()
 
     except Exception as e:
-        print("❌ Add product error:", e)
+        print("add_product error:", e)
         conn.rollback()
 
     finally:
@@ -428,13 +507,30 @@ def get_all_products():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM products")
+    cursor.execute("""
+        SELECT
+            p.product_id,
+            p.name,
+            p.category,
+            p.price,
+            p.producer,
+            p.image,
+            i.quantity,
+            u.upc_code AS upc,
+            COUNT(r.epc_code) AS rfid_count
+        FROM products p
+        LEFT JOIN inventory i ON p.product_id = i.product_id
+        LEFT JOIN product_upc u ON p.product_id = u.product_id
+        LEFT JOIN product_rfid r ON p.product_id = r.product_id
+        GROUP BY p.product_id, u.upc_code
+    """)
+
     results = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return results    
+    return results
 
 
 def delete_product(product_id):
@@ -466,33 +562,42 @@ def update_product(id, name, category, price, upc_code, epc, producer, quantity,
     cursor = conn.cursor()
 
     try:
-        # update main product
+        # 1. update main product
         cursor.execute("""
             UPDATE products
             SET name=%s, category=%s, price=%s, producer=%s, image=%s
             WHERE product_id=%s
         """, (name, category, price, producer, image, id))
 
-        # update UPC
+        # 2. update UPC (ONLY UPC)
         cursor.execute("""
-            UPDATE product_upc
-            SET upc_code=%s, quantity=%s
-            WHERE product_id=%s
-        """, (upc_code, quantity, id))
+            INSERT INTO product_upc (product_id, upc_code)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE upc_code = VALUES(upc_code)
+        """, (id, upc_code))
 
-        # update EPC (only if needed)
+        # 3. update inventory
+        cursor.execute("""
+            UPDATE inventory
+            SET quantity=%s
+            WHERE product_id=%s
+        """, (quantity, id))
+
+        # 4. update RFID (better: replace instead of update 1 row)
         if epc:
             cursor.execute("""
-                UPDATE product_rfid
-                SET epc_code=%s
-                WHERE product_id=%s
-                LIMIT 1
-            """, (epc, id))
+                DELETE FROM product_rfid WHERE product_id=%s
+            """, (id,))
+
+            cursor.execute("""
+                INSERT INTO product_rfid (product_id, epc_code)
+                VALUES (%s, %s)
+            """, (id, epc))
 
         conn.commit()
 
     except Exception as e:
-        print(" Update error:", e)
+        print("UPDATE ERROR:", e)
         conn.rollback()
 
     finally:
