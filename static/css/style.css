@@ -135,6 +135,7 @@ button {
 
     border-radius: 25px;
     padding: 10px 25px;
+    margin: 5px;
     
     transition: 0.2s ease;
 }
@@ -236,8 +237,6 @@ button {
     font-size: 2rem;
 }
 
-
-
 .dashboard {
     display: flex;
     width: 90%;
@@ -308,15 +307,18 @@ button {
 .pdf {
     display: block;
     background-color: white;
-    font-family: monospace;
     color: black;
-    padding: 0 64px;
+    padding: 0 96px;
     width: 8.5in;
     margin: 0;
 }
 
+.pdf-monospace {
+    font-family: monospace;
+}
+
 .pdf pre {
-    padding-top: 64px;
+    padding-top: 96px;
 }
 
 .pdf h1,

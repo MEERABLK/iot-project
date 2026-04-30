@@ -270,7 +270,6 @@ def get_user_points(customer_id):
         return 0
           
 def get_receipt_items(receipt_id):
-    # Fetches all items associated with a specific receipt ID from the database.
     try:
         mydb = mysql.connector.connect(
             host=db_host,
@@ -296,12 +295,7 @@ def get_receipt_items(receipt_id):
     
 def get_receipt_history(customer_id):
     try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
+        mydb = get_connection()
         cursor = mydb.cursor(dictionary=True)
         
         cursor.execute("SELECT receipt_id as id, total, points_earned, created_at as date, payment_method FROM receipts WHERE customer_id = %s", (customer_id,))
@@ -342,6 +336,100 @@ def get_receipt_history(customer_id):
 
     except mysql.connector.Error as err:
         print(f"🚨 Database Error fetching receipt history: {err}")
+        return []
+
+def get_products():
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        query = "SELECT * FROM products"
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching products: {err}")
+        return []
+    
+def get_items_by_date(start_date, end_date):
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        query = "SELECT * FROM receipt_items WHERE 1 = 1"
+        params = []
+
+        if is_valid_date(start_date):
+            query += " AND receipt_id IN (SELECT receipt_id FROM receipts WHERE created_at >= %s)"
+            params.append(start_date)
+
+        if is_valid_date(end_date):
+            query += " AND receipt_id IN (SELECT receipt_id FROM receipts WHERE created_at <= %s)"
+            params.append(end_date)
+        
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching items: {err}")
+        return []
+    
+def get_customer_activity(start_date, end_date):
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        # 1. Base query using a JOIN so we can see the receipt AND the customer account info
+        query = """
+            SELECT 
+                COUNT(DISTINCT r.customer_id) AS active_customers,
+                
+                -- If their account was created during this window, they are New
+                COUNT(DISTINCT CASE WHEN c.created_at >= %s THEN r.customer_id END) AS new_customers,
+                
+                -- If their account was created before this window, they are Returning
+                COUNT(DISTINCT CASE WHEN c.created_at < %s THEN r.customer_id END) AS returning_customers
+
+            FROM receipts r
+            INNER JOIN customers c ON r.customer_id = c.customer_id
+            WHERE 1=1
+        """
+
+        params = [start_date, start_date] # For the CASE statements
+
+        # 2. Dynamically apply the date filter to the RECEIPTS (when the purchase happened)
+        if is_valid_date(start_date):
+            query += " AND r.created_at >= %s"
+            params.append(start_date)
+
+        if is_valid_date(end_date):
+            query += " AND r.created_at <= %s"
+            params.append(end_date)
+
+        # 3. Execute exactly once
+        cursor.execute(query, tuple(params))
+        report = cursor.fetchone()
+
+        # Now you have report['active_customers'], report['new_customers'], etc.
+
+        cursor.close()
+        mydb.close()
+
+        return report
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching items: {err}")
         return []
 
 def normalize_name(name):
@@ -654,3 +742,16 @@ def verify_user(email, password):
     conn.close()
 
     return user
+
+def is_valid_date(date_str):
+    # 1. Check for None or empty string ""
+    if not date_str:
+        return False
+        
+    # 2. Try to parse it against the HTML5 standard format
+    try:
+        datetime.strptime(date_str.strip(), '%Y-%m-%d')
+        return True
+    except ValueError:
+        # It was a string, but not a valid date format
+        return False

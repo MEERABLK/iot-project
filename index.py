@@ -131,6 +131,19 @@ def checkout():
 def admin():
     return render_template('admin.html')
 
+@app.route('/admin/inventory-report')
+def admin_inv_report():
+    
+    return render_template('admin_inv_report.html')
+
+@app.route('/admin/sales-report')
+def admin_sales_report():
+    return render_template('admin_sales_report.html')
+
+@app.route('/admin/ca-report')
+def admin_ca_report():
+    return render_template('admin_ca_report.html')
+
 @app.route('/products', methods=['GET'])
 def get_products():
     try:
