@@ -3,9 +3,10 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_socketio import SocketIO
+import json
 
 from scripts.controller import Controller
-# import scripts.gpio_controller as gpio
+import scripts.gpio_controller as gpio
 import db.database as data
 import time
 from pathlib import Path
@@ -90,10 +91,10 @@ def handle_fan():
     if 'fridge1' in data :
         fridge1 = data.get('fridge1')
 
-        # if fridge1 is True :
-        #     gpio.spinMotor()
-        # else :
-        #     gpio.stopMotor()
+        if fridge1 is True :
+            gpio.spinMotor()
+        else :
+            gpio.stopMotor()
 
     return jsonify({"status": "success"})
 
@@ -273,11 +274,20 @@ def get_current_cart():
     
     return jsonify(formatted_cart)
 
+import json # Ensure this is imported at the top
+
+import json
+
 @app.route('/client/history')
 def client_receipt_history():
     customer_id = session.get('user_id', 1)
+    
     receipts = data.get_receipt_history(customer_id)
-    return render_template('client_receipt_history.html', receipts = receipts)
+    
+    for receipt in receipts:
+        receipt['items_json'] = json.dumps(receipt['lines'], default=str)
+        
+    return render_template('client_receipt_history.html', receipts=receipts)
 
 @app.route('/api/complete-purchase', methods=['POST'])
 def complete_purchase():

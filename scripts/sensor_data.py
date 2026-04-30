@@ -43,6 +43,29 @@ def on_message(client, userdata, msg):
 
     print(f"{msg.topic} -> {payload}")
 
+import requests
+
+def fetch_msp01_data():
+    """Fetches the latest environment data from the Pareto Context API."""
+    url = "http://172.20.10.4:3001/context/device/c30000455da7/3"
+    try:
+        # We use a short timeout so a network hiccup doesn't freeze the app
+        response = requests.get(url, timeout=1.5)
+        if response.status_code == 200:
+            raw_data = response.json()
+            # Navigate to the 'dynamb' object for our specific device
+            dynamb = raw_data['devices']['c30000455da7/3']['dynamb']
+            
+            return {
+                "temp": round(dynamb.get("temperature", 0), 1),
+                "hum": round(dynamb.get("relativeHumidity", 0), 1),
+                "battery": dynamb.get("batteryPercentage", 0),
+                "lux": dynamb.get("luminousFlux", 0)
+            }
+    except Exception as e:
+        print(f"🚨 Sensor Fetch Error: {e}")
+    return None
+
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message

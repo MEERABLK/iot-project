@@ -104,13 +104,11 @@ card.innerHTML = `
         <div>
             <b>${p.name}</b><br>
 
-            $${p.price} | Qty: ${p.quantity}<br>
+            $${p.price} | Qty: ${p.rfid_count}<br>
 
             <small>${p.category || ""}</small><br>
 
             <small><b>UPC:</b> ${p.upc || "N/A"}</small><br>
-
-            <small><b>RFID Tags:</b> ${p.rfid_count || 0} / ${p.quantity}</small>
         </div>
     </div>
 
