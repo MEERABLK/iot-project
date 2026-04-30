@@ -37,7 +37,7 @@
             <!-- Gauge 1 -->
             <div style="flex: 1; text-align: center; min-width: 180px;">
                 <canvas id="gauge-fridge1"></canvas>
-                <div id="f1_temp_display" style="font-weight: bold; margin-top: -15px; font-size: 1.2em;">--</div>
+                <div id="f1_temp_display" style="font-weight: bold; font-size: 1.2em;">--</div>
             </div>
 
             <div class="collection collection-vertical collection-shade-3" style="flex: 1; min-width: 120px;">
@@ -68,7 +68,7 @@
             <!-- Gauge 2 -->
             <div style="flex: 1; text-align: center; min-width: 180px;">
                 <canvas id="gauge-fridge2"></canvas>
-                <div id="f2_temp_display" style="font-weight: bold; margin-top: -15px; font-size: 1.2em;">--</div>
+                <div id="f2_temp_display" style="font-weight: bold; font-size: 1.2em;">--</div>
             </div>
 
             <div class="collection collection-vertical collection-shade-3" style="flex: 1; min-width: 120px;">
@@ -180,32 +180,49 @@ async function fetchTemps() {
         const response = await fetch('/api/temps');
         const data = await response.json();
 
-        // --- UPDATE FRIDGE 1 ---
+        // --- 1. Update Fridge 1 (Temp & Humidity) ---
         if(data.fridge1_temp !== undefined) {
             gauge1.value = data.fridge1_temp;
             document.getElementById('f1_temp_display').textContent = data.fridge1_temp + '°C';
         }
-        
-        // Dynamic Threshold Update
+        // Ensure this matches the key in your Python jsonify
+        if(data.fridge1_humidity !== undefined) {
+            document.getElementById('f1_humidity').textContent = data.fridge1_humidity + '%';
+        }
         if (data.fridge1_threshold !== undefined) {
-            // Update the text label on the screen
             document.getElementById('f1_thresh_val').textContent = data.fridge1_threshold;
-            // Update the gauge "Green Zone" (it will shift if the threshold changed)
             gauge1.update({ highlights: getHighlights(data.fridge1_threshold) });
         }
 
-        // --- UPDATE FRIDGE 2 ---
+        // --- 2. Update Fridge 2 (Temp & Humidity) ---
         if(data.fridge2_temp !== undefined) {
             gauge2.value = data.fridge2_temp;
             document.getElementById('f2_temp_display').textContent = data.fridge2_temp + '°C';
         }
-
+        if(data.fridge2_humidity !== undefined) {
+            document.getElementById('f2_humidity').textContent = data.fridge2_humidity + '%';
+        }
         if (data.fridge2_threshold !== undefined) {
             document.getElementById('f2_thresh_val').textContent = data.fridge2_threshold;
             gauge2.update({ highlights: getHighlights(data.fridge2_threshold) });
         }
 
-        // ... rest of your code ...
+        // --- 3. Update Store Environment (Bluetooth MSP01) ---
+        // We use the keys defined in your get_temps route
+        const ambientTempEl = document.getElementById('ambient-temp');
+        const ambientHumEl = document.getElementById('ambient-hum');
+        const batteryEl = document.getElementById('sensor-battery');
+        const statusEl = document.getElementById('sensor-status');
+
+        if (ambientTempEl) ambientTempEl.textContent = data.ambient_temp ?? '--';
+        if (ambientHumEl) ambientHumEl.textContent = data.ambient_hum ?? '--';
+        if (batteryEl) batteryEl.textContent = data.battery ?? '0';
+        
+        if (statusEl) {
+            statusEl.textContent = data.status ?? 'Offline';
+            statusEl.style.color = (data.status === "Online") ? "#4caf50" : "#f44336";
+        }
+
     } catch (error) {
         console.error("Error fetching dashboard data:", error);
     }
