@@ -16,25 +16,23 @@
     
     <div class="pdf-wrapper">
         <div id="pdf" class="pdf">
-            <h1>Inventory Report</h1>
+            <h1>Customer Activity Report</h1>
             <table>
                 <thead>
                     <tr>
-                        <th>Product ID</th>
-                        <th>Product Name</th>
-                        <th>Available Quantity</th>
-                        <th>Last Restocked</th>
+                        <th>Period</th>
+                        <th>Total Customers</th>
+                        <th>New Customers</th>
+                        <th>Returning Customers</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for product in products %}
                     <tr>
-                        <td>{{ product.id }}</td>
-                        <td>{{ product.name }}</td>
-                        <td>{{ product.qty }}</td>
-                        <td>{{ product.last_updated }}</td>
+                        <td>{{ start_date }} - {{ end_date }}</td>
+                        <td>{{ activity.active_customers }}</td>
+                        <td>{{ activity.new_customers }}</td>
+                        <td>{{ activity.returning_customers }}</td>
                     </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
