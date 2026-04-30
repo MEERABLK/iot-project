@@ -109,54 +109,56 @@ def add_customer(first, last, email, phone, address, city, province, postal_code
 # checkout function
 def create_receipt(customer_id, cart, discount_percent=0.0):
     try:
-        db = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
+        db = get_connection()
         cursor = db.cursor()
 
-        # Calculate totals
         raw_total = sum(item['price'] * item['qty'] for item in cart.values())
         final_total = raw_total * (1 - discount_percent)
-        
-        # Define the variable clearly here
-        points_to_add = int(final_total) 
 
-        # 1. Insert receipt
+        points_to_add = int(final_total)
+
+        # Insert receipt
         cursor.execute(
-            "INSERT INTO receipts (customer_id, total, points_earned) VALUES (%s, %s, %s)",
+            """
+            INSERT INTO receipts (customer_id, total, points_earned)
+            VALUES (%s, %s, %s)
+            """,
             (customer_id, final_total, points_to_add)
         )
+
         receipt_id = cursor.lastrowid
 
-        # 2. Update customer's total points 
-        # Use 'points_to_add' here so it matches the variable above!
+        # Update customer points
         cursor.execute(
-            "UPDATE customers SET points = points + %s WHERE customer_id = %s",
+            """
+            UPDATE customers
+            SET points = points + %s
+            WHERE customer_id = %s
+            """,
             (points_to_add, customer_id)
         )
 
-        # 3. Insert items
+        # ONE LOOP ONLY
         for pid, item in cart.items():
+
             cursor.execute(
-                "INSERT INTO receipt_items (receipt_id, product_id, quantity, price) VALUES (%s, %s, %s, %s)",
+                """
+                INSERT INTO receipt_items
+                (receipt_id, product_id, quantity, price)
+                VALUES (%s, %s, %s, %s)
+                """,
                 (receipt_id, pid, item['qty'], item['price'])
             )
 
-
-        for pid, item in cart.items():
             cursor.execute(
-                "INSERT INTO receipt_items (receipt_id, product_id, quantity, price) VALUES (%s, %s, %s, %s)",
-                 (receipt_id, pid, item['qty'], item['price'])
+                """
+                UPDATE inventory
+                SET quantity = quantity - %s
+                WHERE product_id = %s
+                """,
+                (item['qty'], pid)
             )
 
-    # 🔥 ADD THIS LINE
-            cursor.execute(
-                "UPDATE inventory SET quantity = quantity - %s WHERE product_id = %s",
-                 (item['qty'], pid)
-            )
         db.commit()
         cursor.close()
         db.close()
@@ -164,7 +166,7 @@ def create_receipt(customer_id, cart, discount_percent=0.0):
         return receipt_id
 
     except Exception as e:
-        print("Checkout Error:", e) # This is where 'name points is not defined' was coming from
+        print("Checkout Error:", e)
         return None
 
 def get_user_points(customer_id):
