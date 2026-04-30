@@ -8,6 +8,9 @@ from scripts.controller import Controller
 # import scripts.gpio_controller as gpio
 import db.database as data
 import time
+from pathlib import Path
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(env_path)
 
 app = Flask(__name__)
 app.secret_key = "iot_vanier_1"
@@ -23,7 +26,7 @@ def toggle_off(id):
 
 controller = Controller(toggle_on, toggle_off)
 
-load_dotenv(".env")
+# load_dotenv(".env")
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -133,15 +136,14 @@ def add_product():
         category = req.get('category')
         price = req.get('price')
         upc = req.get('upc')
-        epc = req.get('epc')
+        # epc = req.get('epc')
         producer = req.get('producer')
         quantity = req.get('quantity')
         image = req.get('image')
 
-        if not all([name, category, price, upc, epc, producer, quantity]):
-            return jsonify({"error": "Missing fields"}), 400
+        if not all([name, category, price, upc, producer, quantity]):            return jsonify({"error": "Missing fields"}), 400
 
-        data.add_product(name, category, price, upc, epc, producer, quantity, image)
+        data.add_product(name, category, price, upc, producer, quantity, image)
 
         return jsonify({"message": "Product added"}), 201
 
@@ -335,6 +337,20 @@ def get_user_info():
 #         threading.Thread(target=controller.start, daemon=True).start()
     
 #     socketio.run(app, debug=True)
+@app.route('/api/barcode', methods=['POST'])
+def scan_barcode():
+    data_req = request.get_json()
+    upc = data_req.get('upc')
+
+    if not upc:
+        return jsonify({"error": "No UPC provided"}), 400
+
+    result = controller.add_by_barcode(upc)
+
+    if "error" in result:
+        return jsonify(result), 404
+
+    return jsonify({"status": "added", "product": result})
 
 @app.route('/products/<int:id>/assign-tags', methods=['POST'])
 def assign_tags(id):
