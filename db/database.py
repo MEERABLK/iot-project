@@ -110,54 +110,123 @@ def add_customer(first, last, email, phone, address, city, province, postal_code
 def create_receipt(customer_id, cart, discount_percent=0.0):
     try:
         db = get_connection()
-        cursor = db.cursor()
+        cursor = db.cursor(dictionary=True)
 
-        raw_total = sum(item['price'] * item['qty'] for item in cart.values())
+        # ===============================
+        # 1. CHECK STOCK FIRST
+        # ===============================
+        for pid, item in cart.items():
+
+            cursor.execute("""
+                SELECT quantity
+                FROM inventory
+                WHERE product_id = %s
+            """, (pid,))
+
+            stock = cursor.fetchone()
+
+            if not stock:
+                print(f"❌ Product {pid} not found in inventory")
+                db.rollback()
+                return None
+
+            available = stock['quantity']
+
+            if item['qty'] > available:
+                print(f"❌ Not enough stock for product {pid}")
+                db.rollback()
+                return None
+
+        # ===============================
+        # 2. CALCULATE TOTAL
+        # ===============================
+        raw_total = sum(
+            item['price'] * item['qty']
+            for item in cart.values()
+        )
+
         final_total = raw_total * (1 - discount_percent)
 
         points_to_add = int(final_total)
 
-        # Insert receipt
-        cursor.execute(
-            """
-            INSERT INTO receipts (customer_id, total, points_earned)
+        # ===============================
+        # 3. CREATE RECEIPT
+        # ===============================
+        cursor.execute("""
+            INSERT INTO receipts
+            (customer_id, total, points_earned)
             VALUES (%s, %s, %s)
-            """,
-            (customer_id, final_total, points_to_add)
-        )
+        """, (
+            customer_id,
+            final_total,
+            points_to_add
+        ))
 
         receipt_id = cursor.lastrowid
 
-        # Update customer points
-        cursor.execute(
-            """
+        # ===============================
+        # 4. UPDATE CUSTOMER POINTS
+        # ===============================
+        cursor.execute("""
             UPDATE customers
             SET points = points + %s
             WHERE customer_id = %s
-            """,
-            (points_to_add, customer_id)
-        )
+        """, (
+            points_to_add,
+            customer_id
+        ))
 
-        # ONE LOOP ONLY
+        # ===============================
+        # 5. SAVE ITEMS + REDUCE STOCK + REMOVE RFID TAGS
+        # ===============================
         for pid, item in cart.items():
 
-            cursor.execute(
-                """
+            qty = item['qty']
+            price = item['price']
+
+            # receipt item
+            cursor.execute("""
                 INSERT INTO receipt_items
                 (receipt_id, product_id, quantity, price)
                 VALUES (%s, %s, %s, %s)
-                """,
-                (receipt_id, pid, item['qty'], item['price'])
-            )
+            """, (
+                receipt_id,
+                pid,
+                qty,
+                price
+            ))
 
-            cursor.execute(
-                """
+            # reduce inventory
+            cursor.execute("""
                 UPDATE inventory
                 SET quantity = quantity - %s
                 WHERE product_id = %s
-                """,
-                (item['qty'], pid)
-            )
+            """, (
+                qty,
+                pid
+            ))
+
+            # get RFID tags to remove
+            cursor.execute("""
+                SELECT epc_code
+                FROM product_rfid
+                WHERE product_id = %s
+                LIMIT %s
+            """, (
+                pid,
+                qty
+            ))
+
+            tags = cursor.fetchall()
+
+            # delete purchased RFID tags
+            for tag in tags:
+                cursor.execute("""
+                    DELETE FROM product_rfid
+                    WHERE epc_code = %s
+                """, (
+                    tag['epc_code'],
+                ))
 
         db.commit()
         cursor.close()
