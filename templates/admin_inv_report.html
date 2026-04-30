@@ -12,31 +12,12 @@
         <h3>Download PDF</h3>
     </button>
     
-    <h1>Receipt History</h1>
+    <h1>Inventory Report</h1>
     
     <div class="pdf-wrapper">
         <div id="pdf" class="pdf">
-            {% for receipt in receipts %}
-            <pre>
-            ================================================================
-            TRANSACTION NUMBER: {{ receipt.id }}
-            TRANSACTION DATE: {{ receipt.date }}
-            ----------------------------------------------------------------
-            DESCRIPTION               QTY      PRICE    SUBTOTAL
-            ----------------------------------------------------------------
-            {% for line in receipt.formatted_lines %}{{ line }}
-            {% endfor %}
-            ----------------------------------------------------------------
-            TOTAL: {{ receipt.total }}
-            ----------------------------------------------------------------
-            POINTS EARNED: {{ receipt.points_earned }}
-            PAYMENT METHOD: {{ receipt.payment_method }}
-            ================================================================
-            </pre>
-            {% if not loop.last %}
-                <div class="html2pdf__page-break"></div>
-            {% endif %}
-            {% endfor %}
+            <h1>Inventory Report</h1>
+            
         </div>
     </div>
     
