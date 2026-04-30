@@ -3,14 +3,18 @@
 {% block title %}Fridges{% endblock %}
 
 {% block content %}
+<!-- Load Canvas Gauges Library -->
+<script src="https://cdn.rawgit.com/Mikhus/canvas-gauges/master/gauge.min.js"></script>
+
 <body>
     {% include 'components/back_button.html' %}
     <div class="container">
-        <h2>Fridges</h2>
+        <h2>Fridge Dashboard</h2>
         
+        <!-- Store Environment Section -->
         <div class="collection collection-shade-1" style="margin-bottom: 20px; padding: 15px;">
             <h3>Store Environment (MSP01)</h3>
-            <div class="collection collection-shade-2" style="display: flex; gap: 20px; justify-content: space-around;">
+            <div class="collection collection-shade-2" style="display: flex; gap: 20px; justify-content: space-around; align-items: center;">
                 <div>Temp: <strong id="ambient-temp">{{ ambient_temp }}</strong>°C</div>
                 <div>Humidity: <strong id="ambient-hum">{{ ambient_hum }}</strong>%</div>
                 <div>Battery: <span id="sensor-battery">{{ battery }}</span>%</div>
@@ -18,45 +22,30 @@
             </div>
         </div>
 
-        <h3>Send email</h3>
-        <div class="collection collection-vertical collection-shade-1">
-            <p>Enter the email to send to...</p>
-            <form action="/send_email" method="POST" id="email-form" class="form">
-                <input type="email" name="email" id="email" required="true" placeholder="iot@example.com">
-                <button class="button" type="submit">Send</button>
-            </form>
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                {% if category.startswith('mail') %}
-                    <div class="alert {{ category }}">
-                    {{ message }}
-                    </div>
-                {% endif %}
-                {% endfor %}
-            {% endif %}
-            {% endwith %}
-        </div>
-
+        <!-- Fridge 1 Section -->
         <h3>Fridge 1</h3>
-        <div class="collection collection-shade-2">
-            <div class="collection collection-vertical collection-shade-3">
+        <div class="collection collection-shade-2" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+            <div class="collection collection-vertical collection-shade-3" style="flex: 1; min-width: 200px;">
                 <p>Temperature threshold</p>
-                <div class="display-value">{{ fridge1_threshold }}</div>
-                <form action="/set_threshold/1" method="POST" id="threshold-form" class="form">
-                    <input type="number" name="threshold" id="threshold" min="-20" max="20">
+                <div class="display-value" id="f1_thresh_val">{{ fridge1_threshold }}</div>
+                <form action="/set_threshold/1" method="POST" class="form">
+                    <input type="number" name="threshold" id="threshold1" min="-20" max="20" placeholder="Set...">
                     <button class="button" type="submit">Set</button>
                 </form>
             </div>
-            <div class="collection collection-vertical collection-shade-3">
-                <div>Temp</div>
-                <div id="f1_temp" class="display-value">--</div>
+
+            <!-- Gauge 1 -->
+            <div style="flex: 1; text-align: center; min-width: 180px;">
+                <canvas id="gauge-fridge1"></canvas>
+                <div id="f1_temp_display" style="font-weight: bold; margin-top: -15px; font-size: 1.2em;">--</div>
             </div>
-            <div class="collection collection-vertical collection-shade-3">
+
+            <div class="collection collection-vertical collection-shade-3" style="flex: 1; min-width: 120px;">
                 <div>Humidity</div>
                 <div id="f1_humidity" class="display-value">--</div>
             </div>
-            <div class="collection collection-shade-1">
+            
+            <div class="collection collection-shade-1" style="flex: 0.5; min-width: 100px;">
                 Fan
                 <div class="toggle-body" id="fridge1-toggle">
                     <div class="toggle-switch"></div>
@@ -64,25 +53,30 @@
             </div>
         </div>
 
+        <!-- Fridge 2 Section -->
         <h3>Fridge 2</h3>
-        <div class="collection collection-shade-2">
-            <div class="collection collection-vertical collection-shade-3">
+        <div class="collection collection-shade-2" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+            <div class="collection collection-vertical collection-shade-3" style="flex: 1; min-width: 200px;">
                 <p>Temperature threshold</p>
-                <div class="display-value">{{ fridge2_threshold }}</div>
-                <form action="/set_threshold/2" method="POST" id="threshold-form" class="form">
-                    <input type="number" name="threshold" id="threshold" min="-20" max="20">
+                <div class="display-value" id="f2_thresh_val">{{ fridge2_threshold }}</div>
+                <form action="/set_threshold/2" method="POST" class="form">
+                    <input type="number" name="threshold" id="threshold2" min="-20" max="20" placeholder="Set...">
                     <button class="button" type="submit">Set</button>
                 </form>
             </div>
-            <div class="collection collection-vertical collection-shade-3">
-                <div>Temp</div>
-                <div id="f2_temp" class="display-value">--</div>
+
+            <!-- Gauge 2 -->
+            <div style="flex: 1; text-align: center; min-width: 180px;">
+                <canvas id="gauge-fridge2"></canvas>
+                <div id="f2_temp_display" style="font-weight: bold; margin-top: -15px; font-size: 1.2em;">--</div>
             </div>
-            <div class="collection collection-vertical collection-shade-3">
+
+            <div class="collection collection-vertical collection-shade-3" style="flex: 1; min-width: 120px;">
                 <div>Humidity</div>
                 <div id="f2_humidity" class="display-value">--</div>
             </div>
-            <div class="collection collection-shade-1">
+
+            <div class="collection collection-shade-1" style="flex: 0.5; min-width: 100px;">
                 Fan
                 <div class="toggle-body" id="fridge2-toggle">
                     <div class="toggle-switch"></div>
@@ -95,6 +89,58 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 
 <script>
+// --- GAUGE LOGIC ---
+
+// Helper to calculate dynamic highlights (Green zone is 5 degrees below threshold)
+function getHighlights(threshold) {
+    const thresh = parseFloat(threshold);
+    return [
+        { "from": -20, "to": thresh - 5, "color": "rgba(0, 0, 255, .15)" }, // Cold Zone (Light Blue)
+        { "from": thresh - 5, "to": thresh, "color": "rgba(0, 255, 0, .35)" }, // Safe Zone (Green)
+        { "from": thresh, "to": 40, "color": "rgba(255, 0, 0, .35)" }         // Danger Zone (Red)
+    ];
+}
+
+const commonOptions = {
+    width: 180,
+    height: 180,
+    units: "°C",
+    minValue: -20,
+    maxValue: 40,
+    majorTicks: ["-20","-10","0","10","20","30","40"],
+    minorTicks: 2,
+    strokeTicks: true,
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    needleType: "arrow",
+    needleWidth: 3,
+    needleCircleSize: 7,
+    needleCircleOuter: true,
+    needleCircleInner: false,
+    animationDuration: 1500,
+    animationRule: "linear",
+    valueBox: false // We use our own div for the value text
+};
+
+// Initialize Gauges with current thresholds from Jinja
+const gauge1 = new RadialGauge({ 
+    ...commonOptions, 
+    renderTo: 'gauge-fridge1', 
+    title: "Fridge 1",
+    highlights: getHighlights({{ fridge1_threshold | default(8) }}) 
+}).draw();
+
+const gauge2 = new RadialGauge({ 
+    ...commonOptions, 
+    renderTo: 'gauge-fridge2', 
+    title: "Fridge 2",
+    highlights: getHighlights({{ fridge2_threshold | default(8) }}) 
+}).draw();
+
+
+// --- DASHBOARD LOGIC ---
+
 document.addEventListener("DOMContentLoaded", init);
 
 function init() {
@@ -102,28 +148,24 @@ function init() {
     const fridge1Toggle = document.getElementById("fridge1-toggle");
     const fridge2Toggle = document.getElementById("fridge2-toggle");
 
-    // Toggle Listeners
     fridge1Toggle.addEventListener('click', () => {
         fridge1Toggle.classList.toggle('toggle-on');
-        let isOn = fridge1Toggle.classList.contains('toggle-on');
         fetch('/api/update-fan', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ fridge1: isOn })
+            body: JSON.stringify({ fridge1: fridge1Toggle.classList.contains('toggle-on') })
         });
     });
 
     fridge2Toggle.addEventListener('click', () => {
         fridge2Toggle.classList.toggle('toggle-on');
-        let isOn = fridge2Toggle.classList.contains('toggle-on');
         fetch('/api/update-fan', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ fridge2: isOn })
+            body: JSON.stringify({ fridge2: fridge2Toggle.classList.contains('toggle-on') })
         });
     });
 
-    // Socket listeners for hardware sync
     socket.on('toggle1_updated', (data) => {
         data.toggle_on ? fridge1Toggle.classList.add('toggle-on') : fridge1Toggle.classList.remove('toggle-on');
     });
@@ -138,28 +180,38 @@ async function fetchTemps() {
         const response = await fetch('/api/temps');
         const data = await response.json();
 
-        // Update Fridge 1
-        document.getElementById('f1_temp').textContent = data.fridge1_temp ?? '--';
-        document.getElementById('f1_humidity').textContent = data.fridge1_humidity ?? '--';
-
-        // Update Fridge 2
-        document.getElementById('f2_temp').textContent = data.fridge2_temp ?? '--';
-        document.getElementById('f2_humidity').textContent = data.fridge2_humidity ?? '--';
-
-        // Update MSP01 Store Environment
-        document.getElementById('ambient-temp').textContent = data.ambient_temp ?? '--';
-        document.getElementById('ambient-hum').textContent = data.ambient_hum ?? '--';
-        document.getElementById('sensor-battery').textContent = data.battery ?? '0';
+        // --- UPDATE FRIDGE 1 ---
+        if(data.fridge1_temp !== undefined) {
+            gauge1.value = data.fridge1_temp;
+            document.getElementById('f1_temp_display').textContent = data.fridge1_temp + '°C';
+        }
         
-        const statusEl = document.getElementById('sensor-status');
-        statusEl.textContent = data.status ?? 'Offline';
-        statusEl.style.color = (data.status === "Online") ? "#4caf50" : "#f44336";
+        // Dynamic Threshold Update
+        if (data.fridge1_threshold !== undefined) {
+            // Update the text label on the screen
+            document.getElementById('f1_thresh_val').textContent = data.fridge1_threshold;
+            // Update the gauge "Green Zone" (it will shift if the threshold changed)
+            gauge1.update({ highlights: getHighlights(data.fridge1_threshold) });
+        }
 
+        // --- UPDATE FRIDGE 2 ---
+        if(data.fridge2_temp !== undefined) {
+            gauge2.value = data.fridge2_temp;
+            document.getElementById('f2_temp_display').textContent = data.fridge2_temp + '°C';
+        }
+
+        if (data.fridge2_threshold !== undefined) {
+            document.getElementById('f2_thresh_val').textContent = data.fridge2_threshold;
+            gauge2.update({ highlights: getHighlights(data.fridge2_threshold) });
+        }
+
+        // ... rest of your code ...
     } catch (error) {
         console.error("Error fetching dashboard data:", error);
     }
 }
 
+// Polling interval
 setInterval(fetchTemps, 2000);
 fetchTemps();
 </script>

@@ -101,11 +101,22 @@ def handle_fan():
 @app.route('/api/temps')
 def get_temps():
     sensor_data = get_msp01_context()
+
+    f1_thresh = data.get_threshold("fridge1")
+    f2_thresh = data.get_threshold("fridge2")
+    
+    #Debug
+    print(f"Syncing UI: F1 Thresh: {f1_thresh}, F2 Thresh: {f2_thresh}")
+    
     return jsonify({
         "fridge1_temp": controller.get_fridge1_temp(),
         "fridge1_humidity": controller.get_fridge1_humidity(),
+        "fridge1_threshold": f1_thresh,  # 👈 ADD THIS LINE
+        
         "fridge2_temp": controller.get_fridge2_temp(),
         "fridge2_humidity": controller.get_fridge2_humidity(),
+        "fridge2_threshold": f2_thresh,  # 👈 ADD THIS LINE
+        
         "ambient_temp": sensor_data["temp"] if sensor_data else "N/A",
         "ambient_hum": sensor_data["hum"] if sensor_data else "N/A",
         "battery": sensor_data["battery"] if sensor_data else 0,

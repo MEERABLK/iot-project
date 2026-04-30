@@ -30,25 +30,29 @@ def get_threshold(fridge_name):
             password=db_password,
             database="smartstoreiotproject_db"
         )
-
-        mycursor = mydb.cursor()
-
-        sql = "SELECT temperature_threshold FROM thresholds WHERE fridge_name = %s"
-        mycursor.execute(sql, (fridge_name,))
-
-        result = mycursor.fetchone()
-
-        mycursor.close()
+        cursor = mydb.cursor()
+        
+        # We sort by ID descending to put the highest (newest) ID at the top
+        query = """
+            SELECT temperature_threshold 
+            FROM thresholds 
+            WHERE fridge_name = %s 
+            ORDER BY id DESC 
+            LIMIT 1
+        """
+        
+        cursor.execute(query, (fridge_name,))
+        result = cursor.fetchone()
+        
+        cursor.close()
         mydb.close()
+        
+        # If a result exists, return the float; otherwise, return the default 8.0
+        return float(result[0]) if result else 8.0
 
-        if result:
-            return result[0]  # return threshold value
-        else:
-            return None
-
-    except mysql.connector.Error as err:
-        print("Database Error:", err)
-        return None
+    except Exception as e:
+        print(f"🚨 Error fetching latest threshold for {fridge_name}: {e}")
+        return 8.0
     
 def set_threshold(fridge_name, threshold_value):
     mydb = None

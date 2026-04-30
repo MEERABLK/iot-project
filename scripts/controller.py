@@ -525,6 +525,25 @@ class Controller:
             # Get threshold for a specific fridge
     def get_threshold(self, fridge_name):
         return self.thresholds.get(fridge_name, 8)
+    
+    def set_threshold(self, fridge_name, value):
+        """
+        Updates the temperature threshold for a specific fridge in memory.
+        :param fridge_name: 'fridge1' or 'fridge2'
+        :param value: The new float value for the threshold
+        """
+        with self.lock:
+            if fridge_name in self.thresholds:
+                self.thresholds[fridge_name] = value
+                print(f"✅ Memory Updated: {fridge_name} threshold set to {value}°C")
+                
+                # Reset alert flags so the system can alert again if the new 
+                # threshold is immediately violated
+                if fridge_name == "fridge1":
+                    self.fridge1_alert_sent = False
+            else:
+                print(f"⚠️ Warning: {fridge_name} not found in thresholds dictionary.")
+
     def lock_checkout(self):
         print("🔒 CHECKOUT LOCKED - NO SCANS ALLOWED")
         self.checkout_locked = True
