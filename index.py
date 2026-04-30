@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_socketio import SocketIO
 
 from scripts.controller import Controller
-# import scripts.gpio_controller as gpio
+import scripts.gpio_controller as gpio
 import db.database as data
 import time
 
@@ -87,10 +87,10 @@ def handle_fan():
     if 'fridge1' in data :
         fridge1 = data.get('fridge1')
 
-        # if fridge1 is True :
-        #     gpio.spinMotor()
-        # else :
-        #     gpio.stopMotor()
+        if fridge1 is True :
+            gpio.spinMotor()
+        else :
+            gpio.stopMotor()
 
     return jsonify({"status": "success"})
 
