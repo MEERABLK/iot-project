@@ -6,7 +6,7 @@ from flask_socketio import SocketIO
 import json
 
 from scripts.controller import Controller
-import scripts.gpio_controller as gpio
+# import scripts.gpio_controller as gpio
 import db.database as data
 import time
 from pathlib import Path
@@ -91,10 +91,10 @@ def handle_fan():
     if 'fridge1' in data :
         fridge1 = data.get('fridge1')
 
-        if fridge1 is True :
-            gpio.spinMotor()
-        else :
-            gpio.stopMotor()
+        # if fridge1 is True :
+        #     gpio.spinMotor()
+        # else :
+        #     gpio.stopMotor()
 
     return jsonify({"status": "success"})
 
@@ -133,16 +133,17 @@ def admin():
 
 @app.route('/admin/inventory-report')
 def admin_inv_report():
-    
-    return render_template('admin_inv_report.html')
+    products = data.get_products()
+    return render_template('admin_inv_report.html', products=products)
 
 @app.route('/admin/sales-report')
 def admin_sales_report():
+
     return render_template('admin_sales_report.html')
 
-@app.route('/admin/ca-report')
-def admin_ca_report():
-    return render_template('admin_ca_report.html')
+@app.route('/admin/customer-report')
+def admin_customer_report():
+    return render_template('admin_customer_report.html')
 
 @app.route('/products', methods=['GET'])
 def get_products():

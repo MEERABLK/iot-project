@@ -343,7 +343,7 @@ def get_products():
         mydb = get_connection()
         cursor = mydb.cursor(dictionary=True)
         
-        query = "SELECT * FROM products"
+        query = "SELECT p.product_id as id, p.name, i.quantity as qty, i.last_updated FROM products p JOIN inventory i ON p.product_id = i.product_id"
         
         cursor.execute(query)
         results = cursor.fetchall()
@@ -362,7 +362,7 @@ def get_items_by_date(start_date, end_date):
         mydb = get_connection()
         cursor = mydb.cursor(dictionary=True)
         
-        query = "SELECT * FROM receipt_items WHERE 1 = 1"
+        query = "SELECT p.name, sum(r.quantity) as sold, r.created_at FROM receipt_items r JOIN products p ON r.product_id = p.product_id WHERE 1 = 1"
         params = []
 
         if is_valid_date(start_date):
@@ -372,6 +372,8 @@ def get_items_by_date(start_date, end_date):
         if is_valid_date(end_date):
             query += " AND receipt_id IN (SELECT receipt_id FROM receipts WHERE created_at <= %s)"
             params.append(end_date)
+
+        query += " GROUP BY product_id"
         
         cursor.execute(query, params)
         results = cursor.fetchall()
