@@ -3,6 +3,7 @@ import mysql.connector
 from dotenv import load_dotenv
 import os
 load_dotenv()  # loads variables from .env
+import re
 
 print("DEBUG: Database file loaded successfully!")
 
@@ -343,11 +344,27 @@ def get_receipt_history(customer_id):
         print(f"🚨 Database Error fetching receipt history: {err}")
         return []
 
+def normalize_name(name):
+    # lowercase + remove spaces + remove special characters
+    return re.sub(r'[^a-z0-9]', '', name.lower())
+
 def add_product(name, category, price, upc_code, producer, quantity, image):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     try:
+        normalized = normalize_name(name)
+
+        # check existing products
+        cursor.execute("SELECT name FROM products")
+        all_products = cursor.fetchall()
+
+        for p in all_products:
+            if normalize_name(p["name"]) == normalized:
+                print("❌ Duplicate product name detected!")
+                return False
+
+        # INSERT (same as before)
         cursor.execute("""
             INSERT INTO products (name, category, price, producer, image)
             VALUES (%s,%s,%s,%s,%s)
@@ -366,10 +383,12 @@ def add_product(name, category, price, upc_code, producer, quantity, image):
         """, (product_id, quantity))
 
         conn.commit()
+        return True
 
     except Exception as e:
         print("add_product error:", e)
         conn.rollback()
+        return False
 
     finally:
         cursor.close()
@@ -563,46 +582,45 @@ def delete_product(product_id):
 
 def update_product(id, name, category, price, upc_code, epc, producer, quantity, image):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     try:
-        # 1. update main product
+        normalized = normalize_name(name)
+
+        cursor.execute("SELECT product_id, name FROM products WHERE product_id != %s", (id,))
+        others = cursor.fetchall()
+
+        for p in others:
+            if normalize_name(p["name"]) == normalized:
+                print("❌ Another product already has this name!")
+                return False
+
+        # continue update normally
         cursor.execute("""
             UPDATE products
             SET name=%s, category=%s, price=%s, producer=%s, image=%s
             WHERE product_id=%s
         """, (name, category, price, producer, image, id))
 
-        # 2. update UPC (ONLY UPC)
         cursor.execute("""
             INSERT INTO product_upc (product_id, upc_code)
             VALUES (%s, %s)
             ON DUPLICATE KEY UPDATE upc_code = VALUES(upc_code)
         """, (id, upc_code))
 
-        # 3. update inventory
         cursor.execute("""
             UPDATE inventory
             SET quantity=%s
             WHERE product_id=%s
         """, (quantity, id))
 
-        # 4. update RFID (better: replace instead of update 1 row)
-        if epc:
-            cursor.execute("""
-                DELETE FROM product_rfid WHERE product_id=%s
-            """, (id,))
-
-            cursor.execute("""
-                INSERT INTO product_rfid (product_id, epc_code)
-                VALUES (%s, %s)
-            """, (id, epc))
-
         conn.commit()
+        return True
 
     except Exception as e:
         print("UPDATE ERROR:", e)
         conn.rollback()
+        return False
 
     finally:
         cursor.close()
