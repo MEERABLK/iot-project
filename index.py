@@ -341,6 +341,19 @@ def register():
             
     return render_template('client_register.html')
 
+@app.route('/guest-checkout')
+def guest_checkout():
+    # Clear any old session data to ensure a fresh start
+    session.clear()
+    
+    # Flag the session as a guest
+    session['user_id'] = None
+    session['is_guest'] = True
+    session['user_name'] = "Guest User"
+    
+    # Redirect to your main shopping/checkout page
+    return redirect(url_for('checkout'))
+
 # def register():
 #     return render_template('client_register.html')
 

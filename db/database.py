@@ -245,6 +245,10 @@ def create_receipt(customer_id, cart, discount_percent=0.0):
         return None
 
 def get_user_points(customer_id):
+    # 🛑 GUEST CHECK: If no ID is provided, they have 0 points
+    if customer_id is None:
+        return 0
+
     try:
         mydb = mysql.connector.connect(
             host=db_host,
@@ -254,16 +258,13 @@ def get_user_points(customer_id):
         )
         cursor = mydb.cursor(dictionary=True)
 
-        # Fetch only the points for this specific user
         query = "SELECT points FROM customers WHERE customer_id = %s"
         cursor.execute(query, (customer_id,))
         
         result = cursor.fetchone()
-
         cursor.close()
         mydb.close()
 
-        # Return the points as an integer, default to 0 if user not found
         return result['points'] if result else 0
 
     except mysql.connector.Error as err:

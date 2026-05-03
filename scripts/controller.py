@@ -112,6 +112,13 @@ class Controller:
     #===core logic===
   
     def _handle_tag(self, tag_epc):
+        tag_epc = tag_epc.strip() 
+    
+        # 🛑 PROTECTION: If the tag is weirdly long, don't even try to DB it
+        if len(tag_epc) > 64: # Adjust based on your actual EPC length
+            print(f"Skipping malformed tag burst: {tag_epc[:20]}...")
+            return None
+        
         try:
             with self.lock:
                 assign_product_id = self.admin_assign_product_id
@@ -176,15 +183,19 @@ class Controller:
             self.scanned_epcs.clear()
             self.unknown_tags.clear()
 
-        print(f"ADMIN SCAN MODE ON for product {product_id}")
+            print(f"ADMIN SCAN MODE ON for product {product_id}")
 
     def stop_admin_tag_assignment(self):
         with self.lock:
             self.admin_assign_product_id = None
             self.admin_scan_mode = False
             self.scanned_epcs.clear()
-
-        print("ADMIN SCAN MODE OFF")
+            self.unknown_tags.clear() # 👈 Add this to clear the "ghost" tags
+            
+        # If your RFID reader class has a flush method, call it here
+        # self.reader.flush() 
+        
+        print("ADMIN SCAN MODE OFF - Buffers Cleared")
         
     def get_receipt(self, customer_id):
         """
