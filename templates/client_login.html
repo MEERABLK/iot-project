@@ -22,9 +22,16 @@
 
             <button type="submit" class="button">Log In</button>
             
-            <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a>.</p>
+            <!-- Separator -->
+            <div style="text-align: center; margin: 10px 0; color: #888;">— OR —</div>
+
+            <!-- Guest Button -->
+            <a href="{{ url_for('checkout') }}" class="button" style="text-align: center; text-decoration: none; background-color: #666;">
+                Continue as Guest
+            </a>
+            
+            <p style="margin-top: 15px;">Don't have an account? <a href="{{ url_for('register') }}">Register here</a>.</p>
         </form>
     </div>
 </body>
-
 {% endblock %}
