@@ -493,35 +493,52 @@ def add_product(name, category, price, upc_code, producer, quantity, image):
         conn.close()
 
 def add_rfid_tag(product_id, epc):
-    """
-    Links a physical RFID tag (EPC) to a specific product using its product_id.
-    """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
 
-        # 1. (Optional) Check if this EPC already exists to prevent duplicate errors
-        cursor.execute("SELECT * FROM product_rfid WHERE epc_code = %s", (epc,))
-        if cursor.fetchone():
-            print(f"⚠️ Tag {epc} is already registered to a product.")
-            cursor.close()
-            conn.close()
+    try:
+        epc = epc.strip()
+
+        if not epc:
             return False
 
-        # 2. Insert the new mapping
-        sql = "INSERT INTO product_rfid (product_id, epc_code) VALUES (%s, %s)"
-        cursor.execute(sql, (product_id, epc))
+        cursor.execute("""
+            SELECT epc_code
+            FROM product_rfid
+            WHERE epc_code = %s
+        """, (epc,))
+
+        if cursor.fetchone():
+            print("RFID already exists")
+            return False
+
+        cursor.execute("""
+            INSERT INTO product_rfid (product_id, epc_code)
+            VALUES (%s, %s)
+        """, (product_id, epc))
+
+        cursor.execute("""
+            UPDATE inventory
+            SET quantity = (
+                SELECT COUNT(*)
+                FROM product_rfid
+                WHERE product_id = %s
+            )
+            WHERE product_id = %s
+        """, (product_id, product_id))
 
         conn.commit()
-        print(f"✅ Successfully linked tag {epc} to product ID {product_id}")
-        
-        cursor.close()
-        conn.close()
         return True
 
-    except mysql.connector.Error as err:
-        print(f"🚨 Database Error in add_rfid_tag: {err}")
+    except Exception as e:
+        print("add_rfid_tag error:", e)
+        conn.rollback()
         return False
+
+    finally:
+        cursor.close()
+        conn.close()
+
 
 ## Phase 2 products epc
 def get_product_by_epc(epc):
@@ -636,23 +653,58 @@ def get_all_products():
             p.price,
             p.producer,
             p.image,
-            i.quantity,
+            COALESCE(i.quantity, 0) AS quantity,
             u.upc_code AS upc,
-            COUNT(r.epc_code) AS rfid_count
+            COUNT(r.epc_code) AS rfid_count,
+            GROUP_CONCAT(r.epc_code ORDER BY r.epc_code SEPARATOR ',') AS epcs
         FROM products p
         LEFT JOIN inventory i ON p.product_id = i.product_id
         LEFT JOIN product_upc u ON p.product_id = u.product_id
         LEFT JOIN product_rfid r ON p.product_id = r.product_id
         GROUP BY p.product_id, u.upc_code
+        ORDER BY p.product_id DESC
     """)
 
     results = cursor.fetchall()
 
+    for row in results:
+        row["epcs"] = row["epcs"].split(",") if row["epcs"] else []
+
     cursor.close()
     conn.close()
-
     return results
 
+def delete_rfid_tag(product_id, epc):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            DELETE FROM product_rfid
+            WHERE product_id = %s AND epc_code = %s
+        """, (product_id, epc))
+
+        cursor.execute("""
+            UPDATE inventory
+            SET quantity = (
+                SELECT COUNT(*)
+                FROM product_rfid
+                WHERE product_id = %s
+            )
+            WHERE product_id = %s
+        """, (product_id, product_id))
+
+        conn.commit()
+        return True
+
+    except Exception as e:
+        print("delete_rfid_tag error:", e)
+        conn.rollback()
+        return False
+
+    finally:
+        cursor.close()
+        conn.close()
 
 def delete_product(product_id):
     conn = get_connection()
@@ -678,22 +730,62 @@ def delete_product(product_id):
         cursor.close()
         conn.close()
 
-def update_product(id, name, category, price, upc_code, epc, producer, quantity, image):
+
+
+def update_rfid_tag(product_id, old_epc, new_epc):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        old_epc = old_epc.strip()
+        new_epc = new_epc.strip()
+
+        cursor.execute("""
+            SELECT epc_code
+            FROM product_rfid
+            WHERE epc_code = %s AND epc_code != %s
+        """, (new_epc, old_epc))
+
+        if cursor.fetchone():
+            return False
+
+        cursor.execute("""
+            UPDATE product_rfid
+            SET epc_code = %s
+            WHERE product_id = %s AND epc_code = %s
+        """, (new_epc, product_id, old_epc))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    except Exception as e:
+        print("update_rfid_tag error:", e)
+        conn.rollback()
+        return False
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+def update_product(id, name, category, price, upc_code, producer, image):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
         normalized = normalize_name(name)
 
-        cursor.execute("SELECT product_id, name FROM products WHERE product_id != %s", (id,))
-        others = cursor.fetchall()
+        cursor.execute("""
+            SELECT product_id, name
+            FROM products
+            WHERE product_id != %s
+        """, (id,))
 
-        for p in others:
+        for p in cursor.fetchall():
             if normalize_name(p["name"]) == normalized:
-                print("❌ Another product already has this name!")
                 return False
 
-        # continue update normally
         cursor.execute("""
             UPDATE products
             SET name=%s, category=%s, price=%s, producer=%s, image=%s
@@ -705,12 +797,6 @@ def update_product(id, name, category, price, upc_code, epc, producer, quantity,
             VALUES (%s, %s)
             ON DUPLICATE KEY UPDATE upc_code = VALUES(upc_code)
         """, (id, upc_code))
-
-        cursor.execute("""
-            UPDATE inventory
-            SET quantity=%s
-            WHERE product_id=%s
-        """, (quantity, id))
 
         conn.commit()
         return True

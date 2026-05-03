@@ -43,7 +43,7 @@
                         <input type="number" id="edit_price" placeholder="Price" required>
 
                         <input type="text" id="edit_upc" placeholder="UPC">
-                        <input type="text" id="edit_epc" placeholder="EPC">
+
                         <input type="text" id="edit_producer" placeholder="Producer">
                         <input type="number" id="edit_quantity" placeholder="Quantity">
                         <input type="text" id="edit_image" placeholder="Image URL">
@@ -123,39 +123,127 @@ card.innerHTML = `
 
         <div>
             <b>${p.name}</b><br>
-
-            $${p.price} | Qty: ${p.rfid_count}<br>
-
+            $${p.price} | Qty: ${p.quantity} | RFID Count: ${p.rfid_count}<br>
             <small>${p.category || ""}</small><br>
-
             <small><b>UPC:</b> ${p.upc || "N/A"}</small><br>
+
+            <div style="margin-top:8px;">
+                <b>RFIDs:</b><br>
+                ${(p.epcs || []).length ? p.epcs.map(epc => `
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input value="${epc}" id="rfid_${p.product_id}_${epc}" style="width:220px;">
+                        <button class="button" onclick="updateRfid(${p.product_id}, '${epc}')">Save</button>
+                        <button class="button" style="background:#ff6b6b;" onclick="deleteRfid(${p.product_id}, '${epc}')">Delete</button>
+                    </div>
+                `).join("") : "<small>No RFIDs yet</small>"}
+
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <input id="manual_rfid_${p.product_id}" placeholder="Enter EPC manually">
+                    <button class="button" onclick="addManualRfid(${p.product_id})">Add Manual</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="button"
-            onclick='openEdit(${JSON.stringify(p)})'>
-            Edit
-        </button>
+        <button class="button" onclick='openEdit(${JSON.stringify(p)})'>Edit Product</button>
 
         <button class="button" style="background:#ff6b6b;"
             onclick="deleteProduct(${p.product_id})">
-            Delete
+            Delete Product
         </button>
 
         <button class="button" style="background:#4dabf7;"
-            onclick="assignUnknownTags(${p.product_id})">
-            Add Tag
+            onclick="scanNextTag(${p.product_id})">
+            Add Tag by Scan
         </button>
     </div>
-
 </div>
 `;
 
     container.appendChild(card);
 });
 }
+async function addManualRfid(productId) {
+    const input = document.getElementById(`manual_rfid_${productId}`);
+    const epc = input.value.trim();
 
+    if (!epc) {
+        showMessage("Enter an EPC first", "error");
+        return;
+    }
+
+    const res = await fetch(`/products/${productId}/rfids`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({epc})
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("RFID added manually", "success");
+        loadProducts();
+    } else {
+        showMessage(data.error || "Could not add RFID", "error");
+    }
+}
+
+
+async function updateRfid(productId, oldEpc) {
+    const input = document.getElementById(`rfid_${productId}_${oldEpc}`);
+    const newEpc = input.value.trim();
+
+    const res = await fetch(`/products/${productId}/rfids/${oldEpc}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({epc: newEpc})
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("RFID updated", "success");
+        loadProducts();
+    } else {
+        showMessage(data.error || "Could not update RFID", "error");
+    }
+}
+
+
+async function deleteRfid(productId, epc) {
+    const res = await fetch(`/products/${productId}/rfids/${epc}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("RFID deleted", "success");
+        loadProducts();
+    } else {
+        showMessage(data.error || "Could not delete RFID", "error");
+    }
+}
+
+
+async function scanNextTag(productId) {
+    const res = await fetch(`/products/${productId}/scan-next-tag`, {
+        method: "POST"
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("Now scan the RFID tag. It will be added automatically.", "success");
+
+        setTimeout(() => {
+            loadProducts();
+        }, 3000);
+    } else {
+        showMessage(data.error || "Could not start scan mode", "error");
+    }
+}
 async function assignUnknownTags(productId) {
     const res = await fetch(`/products/${productId}/assign-tags`, {
         method: "POST"
@@ -258,7 +346,6 @@ function openEdit(p) {
     document.getElementById("edit_price").value = p.price;
 
     document.getElementById("edit_upc").value = p.upc || "";
-    document.getElementById("edit_epc").value = p.epc || "";
     document.getElementById("edit_producer").value = p.producer || "";
     document.getElementById("edit_quantity").value = p.quantity || 0;
     document.getElementById("edit_image").value = p.image || "";
@@ -273,7 +360,6 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
         category: document.getElementById("edit_category").value,
         price: parseFloat(document.getElementById("edit_price").value),
         upc: document.getElementById("edit_upc").value,
-        epc: document.getElementById("edit_epc").value,
         producer: document.getElementById("edit_producer").value,
         quantity: parseInt(document.getElementById("edit_quantity").value) || 0,
         image: document.getElementById("edit_image").value
@@ -290,6 +376,8 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
 
    if (res.ok) {
     showMessage("Product updated successfully", "success");
+     document.getElementById("editSection").style.display = "none"; // close form
+    loadProducts(); //  THIS WAS MISSING
 } else {
     showMessage(data.error || "Update failed", "error");
 }

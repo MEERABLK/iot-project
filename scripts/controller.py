@@ -1,4 +1,5 @@
 # controller.py
+from phase1_index import success
 from scripts.sensor_data import data, start as start_mqtt
 from scripts import gpio_controller
 from scripts import send_email
@@ -32,7 +33,8 @@ class Controller:
         self.fridge1_alert_sent = False
         self.checkout_locked = False
         # self.checkout_mode = False
-        # 🌡️ Sensor & Threshold Data
+        #  Sensor & Threshold Data
+        self.admin_assign_product_id = None
         self.state = "SHOPPING"
         self.data = data
         self.thresholds = {
@@ -72,7 +74,7 @@ class Controller:
         threading.Thread(target=self._rfid_background_task, daemon=True).start()
         # start barcode listener
         threading.Thread(target=self.barcode_listener, daemon=True).start()
-
+    
     #===RFID==
     def _rfid_background_task(self):
         """Syncs the controller state and the cart with the physical scanner."""
@@ -106,6 +108,22 @@ class Controller:
     def _handle_tag(self, tag_epc):
         if self.state != "SHOPPING":
             return None
+        with self.lock:
+            assign_product_id = self.admin_assign_product_id
+
+        if assign_product_id is not None:
+            success = database.add_rfid_tag(assign_product_id, tag_epc)
+
+            with self.lock:
+                self.admin_assign_product_id = None
+                self.unknown_tags.clear()
+
+            if success:
+                print(f"Admin assigned RFID {tag_epc} to product {assign_product_id}")
+                return {"status": "admin_assigned", "epc": tag_epc}
+
+            print(f"Admin failed to assign RFID {tag_epc}")
+            return {"error": "admin_assign_failed", "epc": tag_epc}
         try:
             # 1. Safety check for the database attribute and perform lookup
             # This prevents the "module has no attribute" crash
@@ -174,6 +192,13 @@ class Controller:
         """Clears the list after you've handled/registered them."""
         with self.lock:
             self.unknown_tags = []
+
+
+    def start_admin_tag_assignment(self, product_id):
+        with self.lock:
+            self.admin_assign_product_id = product_id
+            self.unknown_tags.clear()
+        print(f"Admin mode: next scanned RFID will be assigned to product {product_id}")
 
     def get_receipt(self, customer_id):
         """
