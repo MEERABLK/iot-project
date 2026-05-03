@@ -50,8 +50,8 @@
 <div id="rfidEditor" class="rfid-editor"></div>
 
 <div class="edit-actions">
-    <button class="button" type="submit">Save Product Changes</button>
-    <button type="button" class="button button-secondary" onclick="closeEdit()">Done / Close</button>
+    <button class="button admin-button-blue" type="submit">Save Product Changes</button>
+    <button type="button" class="button admin-button-secondary" onclick="closeEdit()">Done / Close</button>
 </div>                        
                     </form>
                 </div>
@@ -146,8 +146,8 @@ card.innerHTML = `
         </div>
 
         <div class="admin-product-actions">
-            <button class="button" onclick='openEdit(${JSON.stringify(p)})'>Manage</button>
-            <button class="button button-danger" onclick="deleteProduct(${p.product_id})">Delete</button>
+            <button class="button admin-button-secondary" onclick='openEdit(${JSON.stringify(p)})'>Manage</button>
+            <button class="button admin-button-danger" onclick="deleteProduct(${p.product_id})">Delete</button>
         </div>
     </div>
 `;
@@ -195,15 +195,14 @@ function renderRfidEditor(p) {
                     <small>${epcs.length} tag(s) assigned to this product</small>
                 </div>
 
-                <button type="button" class="button button-secondary" onclick="closeEdit()">
+                <button type="button" class="button admin-button-secondary" onclick="closeEdit()">
                     Done / Close
                 </button>
             </div>
 
             <div class="admin-rfid-add-row">
                 <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
-                <button type="button" class="button" onclick="addManualRfid()">Add Manual</button>
-                <button type="button" class="button button-blue" onclick="scanNextTag()">Scan Tag</button>
+                <button type="button" class="button admin-button-blue" onclick="scanNextTag()">Scan Tag</button>
             </div>
 
             <div id="scanStatus" class="admin-scan-status"></div>
