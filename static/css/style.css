@@ -369,3 +369,164 @@ button {
   padding: 8px;
   border: 1px solid black;
 }
+
+/* admin html */
+/* ===== New Admin UI only: no old class overrides ===== */
+
+.admin-product-card-inner {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    width: 100%;
+    align-items: center;
+}
+
+.admin-product-main {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-product-img {
+    width: 75px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 15px;
+}
+
+.admin-product-img-empty {
+    background: #ffe3bf;
+    color: #b16940;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+}
+
+.admin-product-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+}
+
+.admin-product-meta,
+.admin-product-stats {
+    font-size: 13px;
+    color: white;
+}
+
+.admin-rfid-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.admin-rfid-chip {
+    background: #ffe3bf;
+    color: #7a3f25;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.admin-rfid-chip-more {
+    background: #b16940;
+    color: white;
+}
+
+.admin-rfid-empty {
+    font-size: 12px;
+    color: white;
+}
+
+.admin-product-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-rfid-editor {
+    width: 100%;
+}
+
+.admin-rfid-panel {
+    width: 100%;
+    background: rgba(255,255,255,0.25);
+    border-radius: 18px;
+    padding: 15px;
+    margin-top: 12px;
+}
+
+.admin-rfid-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-rfid-panel-header h4 {
+    margin: 0;
+    color: white;
+}
+
+.admin-rfid-panel-header small {
+    color: white;
+}
+
+.admin-rfid-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.admin-rfid-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-rfid-edit-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255,255,255,0.35);
+    padding: 10px;
+    border-radius: 14px;
+}
+
+.admin-rfid-edit-row input {
+    font-family: monospace;
+}
+
+.admin-rfid-empty-box {
+    color: white;
+    padding: 10px;
+}
+
+.admin-scan-status {
+    color: white;
+    font-weight: bold;
+    margin: 8px 0;
+}
+
+.admin-edit-actions {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+}
+
+.admin-button-danger {
+    background: #ff6b6b;
+}
+
+.admin-button-blue {
+    background: #4dabf7;
+}
+
+.admin-button-secondary {
+    background: #999;
+}

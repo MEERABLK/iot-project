@@ -29,7 +29,6 @@
                 
                 
                     <input type="text" id="image" placeholder="Image URL">  
-                    <div id="rfidEditor" style="width:100%;"></div>         
                     <button class="button" type="submit">Add</button>
                 </form>
 
@@ -48,11 +47,12 @@
                         <input type="text" id="edit_producer" placeholder="Producer">
                         <input type="number" id="edit_quantity" placeholder="Quantity">
                         <input type="text" id="edit_image" placeholder="Image URL">
+<div id="rfidEditor" class="rfid-editor"></div>
 
-                        <button class="button" type="submit">Save Changes</button>
-                        <button type="button" class="button" onclick="closeEdit()" style="background:#999;">
-                            Cancel
-                        </button>
+<div class="edit-actions">
+    <button class="button" type="submit">Save Product Changes</button>
+    <button type="button" class="button button-secondary" onclick="closeEdit()">Done / Close</button>
+</div>                        
                     </form>
                 </div>
             </div>
@@ -111,29 +111,46 @@ async function loadProducts() {
         const card = document.createElement('div');
         card.className = "product-card";
 
-        card.innerHTML = `
-            <div style="display:flex; gap:14px; justify-content:space-between; align-items:center;">
-                <div style="display:flex; gap:12px; align-items:center;">
-                    ${p.image ? `
-                        <img src="${p.image}" style="width:70px; height:70px; object-fit:cover; border-radius:12px;">
-                    ` : ""}
+       const epcPreview = (p.epcs || []).slice(0, 3).map(epc => `
+    <span class="admin-rfid-chip">${epc}</span>
+`).join("");
 
-                    <div>
-                        <b style="font-size:16px;">${p.name}</b><br>
-                        <small>${p.category || "No category"}</small><br>
-                        <small><b>UPC:</b> ${p.upc || "N/A"}</small><br>
-                        <small><b>Price:</b> $${p.price} | <b>Qty:</b> ${p.quantity} | <b>RFIDs:</b> ${p.rfid_count}</small>
-                    </div>
+const extraCount = (p.epcs || []).length > 3 
+    ? `<span class="admin-rfid-chip admin-rfid-chip-more">+${(p.epcs || []).length - 3} more</span>` 
+    : "";
+
+card.innerHTML = `
+<div class="admin-product-card-inner">
+            <div class="admin-product-main">
+            ${p.image ? `
+                <img src="${p.image}" class="admin-product-img">
+            ` : `
+                <div class="admin-product-img admin-product-img-empty">No Image</div>
+            `}
+
+            <div class="admin-product-info">
+                <div class="admin-product-title">${p.name}</div>
+                <div class="admin-product-meta">${p.category || "No category"}</div>
+                <div class="admin-product-meta"><b>UPC:</b> ${p.upc || "N/A"}</div>
+                <div class="admin-product-stats">
+                    <span>$${p.price}</span>
+                    <span>Qty: ${p.quantity}</span>
+                    <span>RFIDs: ${p.rfid_count}</span>
                 </div>
 
-                <div style="display:flex; gap:8px;">
-                    <button class="button" onclick='openEdit(${JSON.stringify(p)})'>Manage</button>
-                    <button class="button" style="background:#ff6b6b;" onclick="deleteProduct(${p.product_id})">
-                        Delete
-                    </button>
+                <div class="admin-rfid-preview">
+                    ${epcPreview || `<span class="admin-rfid-empty">No RFID tags assigned</span>`}
+                    ${extraCount}
                 </div>
             </div>
-        `;
+        </div>
+
+        <div class="admin-product-actions">
+            <button class="button" onclick='openEdit(${JSON.stringify(p)})'>Manage</button>
+            <button class="button button-danger" onclick="deleteProduct(${p.product_id})">Delete</button>
+        </div>
+    </div>
+`;
 
         container.appendChild(card);
     });
@@ -171,47 +188,43 @@ function renderRfidEditor(p) {
     const epcs = p.epcs || [];
 
     box.innerHTML = `
-        <hr style="width:100%; margin:15px 0;">
+        <div class="admin-rfid-panel">
+            <div class="admin-rfid-panel-header">
+                <div>
+                    <h4>RFID / EPC Tags</h4>
+                    <small>${epcs.length} tag(s) assigned to this product</small>
+                </div>
 
-        <h4>RFID / EPC Tags</h4>
+                <button type="button" class="button button-secondary" onclick="closeEdit()">
+                    Done / Close
+                </button>
+            </div>
 
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
-            <button type="button" class="button" onclick="addManualRfid()">Add Manual</button>
+            <div class="admin-rfid-add-row">
+                <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
+                <button type="button" class="button" onclick="addManualRfid()">Add Manual</button>
+                <button type="button" class="button button-blue" onclick="scanNextTag()">Scan Tag</button>
+            </div>
+
+            <div id="scanStatus" class="admin-scan-status"></div>
+
+            <div class="admin-rfid-list">
+                ${
+                    epcs.length
+                    ? epcs.map(epc => {
+                        const id = safeId(epc);
+                        return `
+                            <div class="admin-rfid-edit-row">
+                                <input value="${epc}" id="rfid_${id}">
+                                <button type="button" class="button" onclick="updateRfid('${epc}')">Save EPC</button>
+                                <button type="button" class="button button-danger" onclick="deleteRfid('${epc}')">Delete</button>
+                            </div>
+                        `;
+                    }).join("")
+                    : `<div class="admin-rfid-empty-box">No RFID tags linked yet. Add manually or scan one.</div>`
+                }
+            </div>
         </div>
-
-        <button type="button" class="button" style="background:#4dabf7; margin-bottom:12px;" onclick="scanNextTag()">
-            Add Tag by Scan
-        </button>
-
-        <div id="scanStatus" style="margin-bottom:10px; font-size:14px;"></div>
-
-        ${
-            epcs.length
-            ? epcs.map(epc => {
-                const id = safeId(epc);
-                return `
-                    <div style="
-                        display:flex;
-                        gap:8px;
-                        align-items:center;
-                        margin-top:8px;
-                        padding:8px;
-                        border-radius:10px;
-                        background:rgba(255,255,255,0.08);
-                    ">
-                        <input 
-                            value="${epc}" 
-                            id="rfid_${id}" 
-                            style="flex:1;"
-                        >
-                        <button type="button" class="button" onclick="updateRfid('${epc}')">Save</button>
-                        <button type="button" class="button" style="background:#ff6b6b;" onclick="deleteRfid('${epc}')">Delete</button>
-                    </div>
-                `;
-            }).join("")
-            : "<small>No RFID tags linked to this product yet.</small>"
-        }
     `;
 }
 
