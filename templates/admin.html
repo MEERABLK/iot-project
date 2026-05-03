@@ -28,7 +28,8 @@
                     <input type="number" id="quantity" placeholder="Quantity" required>
                 
                 
-                    <input type="text" id="image" placeholder="Image URL">           
+                    <input type="text" id="image" placeholder="Image URL">  
+                    <div id="rfidEditor" style="width:100%;"></div>         
                     <button class="button" type="submit">Add</button>
                 </form>
 
@@ -92,277 +93,172 @@
 </div>
 
 <script>
+let currentEditingProduct = null;
 
 async function loadProducts() {
     const res = await fetch('/products');
     const data = await res.json();
 
-if (!res.ok) {
-    showMessage(data.error || "Update failed", "error");
-    return;
-}
-
-// showMessage("Product updated", "success");
+    if (!res.ok) {
+        showMessage(data.error || "Could not load products", "error");
+        return;
+    }
 
     const container = document.getElementById('productList');
     container.innerHTML = "";
 
-data.forEach(p => {
+    data.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "product-card";
 
-    const card = document.createElement('div');
-    card.className = "product-card";
+        card.innerHTML = `
+            <div style="display:flex; gap:14px; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:12px; align-items:center;">
+                    ${p.image ? `
+                        <img src="${p.image}" style="width:70px; height:70px; object-fit:cover; border-radius:12px;">
+                    ` : ""}
 
-card.innerHTML = `
-<div style="display:flex; gap:10px; align-items:flex-start; justify-content:space-between;">
-
-    <div style="display:flex; gap:10px;">
-        ${p.image ? `
-        <img src="${p.image}" 
-             style="width:60px; height:60px; object-fit:cover; border-radius:10px;">
-        ` : ""}
-
-        <div>
-            <b>${p.name}</b><br>
-            $${p.price} | Qty: ${p.quantity} | RFID Count: ${p.rfid_count}<br>
-            <small>${p.category || ""}</small><br>
-            <small><b>UPC:</b> ${p.upc || "N/A"}</small><br>
-
-            <div style="margin-top:8px;">
-                <b>RFIDs:</b><br>
-                ${(p.epcs || []).length ? p.epcs.map(epc => `
-                    <div style="display:flex; gap:6px; margin-top:4px;">
-                        <input value="${epc}" id="rfid_${p.product_id}_${epc}" style="width:220px;">
-                        <button class="button" onclick="updateRfid(${p.product_id}, '${epc}')">Save</button>
-                        <button class="button" style="background:#ff6b6b;" onclick="deleteRfid(${p.product_id}, '${epc}')">Delete</button>
+                    <div>
+                        <b style="font-size:16px;">${p.name}</b><br>
+                        <small>${p.category || "No category"}</small><br>
+                        <small><b>UPC:</b> ${p.upc || "N/A"}</small><br>
+                        <small><b>Price:</b> $${p.price} | <b>Qty:</b> ${p.quantity} | <b>RFIDs:</b> ${p.rfid_count}</small>
                     </div>
-                `).join("") : "<small>No RFIDs yet</small>"}
+                </div>
 
-                <div style="display:flex; gap:6px; margin-top:8px;">
-                    <input id="manual_rfid_${p.product_id}" placeholder="Enter EPC manually">
-                    <button class="button" onclick="addManualRfid(${p.product_id})">Add Manual</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="button" onclick='openEdit(${JSON.stringify(p)})'>Manage</button>
+                    <button class="button" style="background:#ff6b6b;" onclick="deleteProduct(${p.product_id})">
+                        Delete
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
+        `;
 
-    <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="button" onclick='openEdit(${JSON.stringify(p)})'>Edit Product</button>
-
-        <button class="button" style="background:#ff6b6b;"
-            onclick="deleteProduct(${p.product_id})">
-            Delete Product
-        </button>
-
-        <button class="button" style="background:#4dabf7;"
-            onclick="scanNextTag(${p.product_id})">
-            Add Tag by Scan
-        </button>
-    </div>
-</div>
-`;
-
-    container.appendChild(card);
-});
-}
-async function addManualRfid(productId) {
-    const input = document.getElementById(`manual_rfid_${productId}`);
-    const epc = input.value.trim();
-
-    if (!epc) {
-        showMessage("Enter an EPC first", "error");
-        return;
-    }
-
-    const res = await fetch(`/products/${productId}/rfids`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({epc})
+        container.appendChild(card);
     });
-
-    const data = await res.json();
-
-    if (res.ok) {
-        showMessage("RFID added manually", "success");
-        loadProducts();
-    } else {
-        showMessage(data.error || "Could not add RFID", "error");
-    }
 }
 
-
-async function updateRfid(productId, oldEpc) {
-    const input = document.getElementById(`rfid_${productId}_${oldEpc}`);
-    const newEpc = input.value.trim();
-
-    const res = await fetch(`/products/${productId}/rfids/${oldEpc}`, {
-        method: "PUT",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({epc: newEpc})
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-        showMessage("RFID updated", "success");
-        loadProducts();
-    } else {
-        showMessage(data.error || "Could not update RFID", "error");
-    }
-}
-
-
-async function deleteRfid(productId, epc) {
-    const res = await fetch(`/products/${productId}/rfids/${epc}`, {
-        method: "DELETE"
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-        showMessage("RFID deleted", "success");
-        loadProducts();
-    } else {
-        showMessage(data.error || "Could not delete RFID", "error");
-    }
-}
-
-
-async function scanNextTag(productId) {
-    const res = await fetch(`/products/${productId}/scan-next-tag`, {
-        method: "POST"
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-        showMessage("Now scan the RFID tag. It will be added automatically.", "success");
-
-        setTimeout(() => {
-            loadProducts();
-        }, 3000);
-    } else {
-        showMessage(data.error || "Could not start scan mode", "error");
-    }
-}
-async function assignUnknownTags(productId) {
-    const res = await fetch(`/products/${productId}/assign-tags`, {
-        method: "POST"
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-        showMessage(`Success! Assigned tag ${data.new_epc} to product.`, "success");
-        loadProducts(); // Refresh the list to show the new EPC
-    } else {
-        // This will trigger if the unknown_tags list is empty
-        showMessage(data.error, "error");
-    }
-}
-
-
-// ADD PRODUCT
-document.getElementById("addForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-const product = {
-    name: document.getElementById("name").value.trim(),
-    category: document.getElementById("category").value.trim(),
-    price: document.getElementById("price").value,
-    upc: document.getElementById("upc").value.trim(),
-    producer: document.getElementById("producer").value.trim(),
-    quantity: document.getElementById("quantity").value,
-    image: document.getElementById("image").value.trim()
-};
-
-    // RUN VALIDATION 
-    
-const res = await fetch('/products', {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(product)
-});
-
-const data = await res.json();
-
-if (!res.ok) {
-    showMessage(data.error || "Something went wrong", "error");
-    return;
-}
-
-//showMessage("Product added successfully", "success");
-
-e.target.reset();
-loadProducts();
-});
-
-
-// DELETE
-async function deleteProduct(id) {
-    await fetch(`/products/${id}`, {
-        method: "DELETE"
-    });
-
-    loadProducts();
-}
-
-
-// EDIT (simple prompt version for now)
-async function editProduct(id, name, epc, price) {
-
-    const newName = prompt("New name:", name);
-    const newEpc = prompt("New EPC:", epc);
-    const newPrice = prompt("New price:", price);
-
-    if (!newName || !newEpc || !newPrice) return;
-
-    await fetch(`/products/${id}`, {
-        method: "PUT",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            name: newName,
-            tag: newEpc,
-            price: newPrice
-        })
-    });
-
-    loadProducts();
-}
-
-
-// INIT
-loadProducts();
-
-
-
-
-//
 function openEdit(p) {
+    currentEditingProduct = p;
+
     document.getElementById("editSection").style.display = "block";
 
     document.getElementById("edit_id").value = p.product_id;
-    document.getElementById("edit_name").value = p.name;
+    document.getElementById("edit_name").value = p.name || "";
     document.getElementById("edit_category").value = p.category || "";
-    document.getElementById("edit_price").value = p.price;
-
+    document.getElementById("edit_price").value = p.price || "";
     document.getElementById("edit_upc").value = p.upc || "";
     document.getElementById("edit_producer").value = p.producer || "";
     document.getElementById("edit_quantity").value = p.quantity || 0;
     document.getElementById("edit_image").value = p.image || "";
+
+    renderRfidEditor(p);
+    document.getElementById("editSection").scrollIntoView({ behavior: "smooth" });
 }
+
+function closeEdit() {
+    document.getElementById("editSection").style.display = "none";
+    currentEditingProduct = null;
+}
+
+function safeId(text) {
+    return String(text).replace(/[^a-zA-Z0-9]/g, "");
+}
+
+function renderRfidEditor(p) {
+    const box = document.getElementById("rfidEditor");
+    const epcs = p.epcs || [];
+
+    box.innerHTML = `
+        <hr style="width:100%; margin:15px 0;">
+
+        <h4>RFID / EPC Tags</h4>
+
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
+            <button type="button" class="button" onclick="addManualRfid()">Add Manual</button>
+        </div>
+
+        <button type="button" class="button" style="background:#4dabf7; margin-bottom:12px;" onclick="scanNextTag()">
+            Add Tag by Scan
+        </button>
+
+        <div id="scanStatus" style="margin-bottom:10px; font-size:14px;"></div>
+
+        ${
+            epcs.length
+            ? epcs.map(epc => {
+                const id = safeId(epc);
+                return `
+                    <div style="
+                        display:flex;
+                        gap:8px;
+                        align-items:center;
+                        margin-top:8px;
+                        padding:8px;
+                        border-radius:10px;
+                        background:rgba(255,255,255,0.08);
+                    ">
+                        <input 
+                            value="${epc}" 
+                            id="rfid_${id}" 
+                            style="flex:1;"
+                        >
+                        <button type="button" class="button" onclick="updateRfid('${epc}')">Save</button>
+                        <button type="button" class="button" style="background:#ff6b6b;" onclick="deleteRfid('${epc}')">Delete</button>
+                    </div>
+                `;
+            }).join("")
+            : "<small>No RFID tags linked to this product yet.</small>"
+        }
+    `;
+}
+
+document.getElementById("addForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const product = {
+        name: document.getElementById("name").value.trim(),
+        category: document.getElementById("category").value.trim(),
+        price: document.getElementById("price").value,
+        upc: document.getElementById("upc").value.trim(),
+        producer: document.getElementById("producer").value.trim(),
+        quantity: document.getElementById("quantity").value,
+        image: document.getElementById("image").value.trim()
+    };
+
+    const res = await fetch('/products', {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(product)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        showMessage(data.error || "Something went wrong", "error");
+        return;
+    }
+
+    showMessage("Product added successfully", "success");
+    e.target.reset();
+    loadProducts();
+});
+
 document.getElementById("editForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const id = document.getElementById("edit_id").value;
 
     const updatedProduct = {
-        name: document.getElementById("edit_name").value,
-        category: document.getElementById("edit_category").value,
+        name: document.getElementById("edit_name").value.trim(),
+        category: document.getElementById("edit_category").value.trim(),
         price: parseFloat(document.getElementById("edit_price").value),
-        upc: document.getElementById("edit_upc").value,
-        producer: document.getElementById("edit_producer").value,
+        upc: document.getElementById("edit_upc").value.trim(),
+        producer: document.getElementById("edit_producer").value.trim(),
         quantity: parseInt(document.getElementById("edit_quantity").value) || 0,
-        image: document.getElementById("edit_image").value
+        image: document.getElementById("edit_image").value.trim()
     };
 
     const res = await fetch(`/products/${id}`, {
@@ -372,42 +268,150 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     });
 
     const data = await res.json();
-    console.log(data);
 
-   if (res.ok) {
-    showMessage("Product updated successfully", "success");
-     document.getElementById("editSection").style.display = "none"; // close form
-    loadProducts(); //  THIS WAS MISSING
-} else {
-    showMessage(data.error || "Update failed", "error");
-}
+    if (res.ok) {
+        showMessage("Product updated successfully", "success");
+        closeEdit();
+        loadProducts();
+    } else {
+        showMessage(data.error || "Update failed", "error");
+    }
 });
 
-//validation
-function validateProduct(p) {
-    const nameRegex = /^[A-Za-z0-9\s\-&()]+$/;
-    const categoryRegex = /^[A-Za-z\s]{2,30}$/;
-    const priceRegex = /^\d+(\.\d{1,2})?$/;
-    const upcRegex = /^\d{8,13}$/;
-    const epcRegex = /^[A-Za-z0-9]{1,24}$/;
-    const producerRegex = /^[A-Za-z0-9\s\-&.,()]{2,50}$/;
+async function addManualRfid() {
+    if (!currentEditingProduct) return;
 
-    return (
-        nameRegex.test(p.name) &&
-        categoryRegex.test(p.category) &&
-        priceRegex.test(p.price) &&
-        upcRegex.test(p.upc) &&
-        epcRegex.test(p.epc) &&
-        producerRegex.test(p.producer)
-    );
+    const input = document.getElementById("new_manual_epc");
+    const epc = input.value.trim();
+
+    if (!epc) {
+        showMessage("Enter an EPC first", "error");
+        return;
+    }
+
+    const res = await fetch(`/products/${currentEditingProduct.product_id}/rfids`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ epc })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("RFID added manually", "success");
+        await refreshCurrentProduct();
+    } else {
+        showMessage(data.error || "Could not add RFID", "error");
+    }
 }
 
-//js function
+async function updateRfid(oldEpc) {
+    if (!currentEditingProduct) return;
+
+    const input = document.getElementById(`rfid_${safeId(oldEpc)}`);
+    const newEpc = input.value.trim();
+
+    const res = await fetch(`/products/${currentEditingProduct.product_id}/rfids/${encodeURIComponent(oldEpc)}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ epc: newEpc })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("RFID updated", "success");
+        await refreshCurrentProduct();
+    } else {
+        showMessage(data.error || "Could not update RFID", "error");
+    }
+}
+
+async function deleteRfid(epc) {
+    if (!currentEditingProduct) return;
+
+    const res = await fetch(`/products/${currentEditingProduct.product_id}/rfids/${encodeURIComponent(epc)}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMessage("RFID deleted", "success");
+        await refreshCurrentProduct();
+    } else {
+        showMessage(data.error || "Could not delete RFID", "error");
+    }
+}
+
+async function scanNextTag() {
+    if (!currentEditingProduct) return;
+
+    const status = document.getElementById("scanStatus");
+    status.innerHTML = "Waiting for RFID scan...";
+
+    const res = await fetch(`/products/${currentEditingProduct.product_id}/scan-next-tag`, {
+        method: "POST"
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        showMessage(data.error || "Could not start scan mode", "error");
+        status.innerHTML = "";
+        return;
+    }
+
+    showMessage("Scan the RFID tag now", "success");
+
+    let tries = 0;
+    const interval = setInterval(async () => {
+        tries++;
+
+        await refreshCurrentProduct(false);
+
+        if (tries >= 6) {
+            clearInterval(interval);
+            status.innerHTML = "Scan check finished. If tag did not appear, scan again.";
+        }
+    }, 1000);
+}
+
+async function refreshCurrentProduct(showMsg = true) {
+    const res = await fetch('/products');
+    const products = await res.json();
+
+    const updated = products.find(p => p.product_id === currentEditingProduct.product_id);
+
+    if (updated) {
+        currentEditingProduct = updated;
+        renderRfidEditor(updated);
+        loadProducts();
+
+        if (showMsg) {
+            showMessage("Updated", "success");
+        }
+    }
+}
+
+async function deleteProduct(id) {
+    const res = await fetch(`/products/${id}`, {
+        method: "DELETE"
+    });
+
+    if (res.ok) {
+        showMessage("Product deleted", "success");
+        closeEdit();
+        loadProducts();
+    } else {
+        showMessage("Could not delete product", "error");
+    }
+}
+
 function showMessage(text, type) {
     const box = document.getElementById("messageBox");
 
     box.innerText = text;
-
     box.classList.remove("msg-success", "msg-error");
 
     if (type === "error") {
@@ -425,6 +429,7 @@ function showMessage(text, type) {
     }, 3000);
 }
 
+loadProducts();
 </script>
 
 </body>
