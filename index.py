@@ -262,6 +262,10 @@ def delete_rfid(id, epc):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/admin/stop-scan-tags', methods=['POST'])
+def stop_scan_tags():
+    controller.stop_admin_tag_assignment()
+    return jsonify({"message": "Scan mode stopped"})
 
 @app.route('/products/<int:id>/scan-next-tag', methods=['POST'])
 def scan_next_tag(id):

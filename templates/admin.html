@@ -199,7 +199,7 @@ function renderRfidEditor(p) {
                 </button>
             </div>
 
-         <div class="admin-rfid-add-row">
+ <div class="admin-rfid-add-row">
     <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
 
     <button type="button" class="button" onclick="addManualRfid()">
@@ -207,7 +207,11 @@ function renderRfidEditor(p) {
     </button>
 
     <button type="button" class="button admin-button-blue" onclick="scanNextTag()">
-        Scan Tag
+        Start Scan
+    </button>
+
+    <button type="button" class="button admin-button-danger" onclick="stopScanTags()">
+        Stop Scan
     </button>
 </div>
 
@@ -366,34 +370,40 @@ async function scanNextTag() {
     if (!currentEditingProduct) return;
 
     const status = document.getElementById("scanStatus");
-    status.innerHTML = "Waiting for RFID scan... You have 20 seconds.";
+
+    status.innerHTML = "🟢 Multi-scan mode ON. Scan as many RFID tags as you want.";
 
     const res = await fetch(`/products/${currentEditingProduct.product_id}/scan-next-tag`, {
         method: "POST"
     });
 
-    const data = await res.json();
-
     if (!res.ok) {
-        showMessage(data.error || "Could not start scan mode", "error");
-        status.innerHTML = "";
+        const data = await res.json();
+        showMessage(data.error || "Could not start scan", "error");
         return;
     }
 
-    showMessage("Scan the RFID tag now", "success");
+    showMessage("Scan mode started", "success");
 
-    let tries = 0;
-
-    const interval = setInterval(async () => {
-        tries++;
-
+    window.scanInterval = setInterval(async () => {
         await refreshCurrentProduct(false);
-
-        if (tries >= 20) {
-            clearInterval(interval);
-            status.innerHTML = "Scan check finished. If tag did not appear, click Scan Tag again.";
-        }
     }, 1000);
+}
+
+async function stopScanTags() {
+    await fetch('/admin/stop-scan-tags', {
+        method: "POST"
+    });
+
+    if (window.scanInterval) {
+        clearInterval(window.scanInterval);
+    }
+
+    document.getElementById("scanStatus").innerHTML = "🔴 Scan stopped";
+
+    showMessage("Scan stopped", "success");
+
+    await refreshCurrentProduct(false);
 }
 
 async function refreshCurrentProduct(showMsg = true) {
