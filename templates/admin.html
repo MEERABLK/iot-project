@@ -32,7 +32,21 @@
                     <button class="button" type="submit">Add</button>
                 </form>
 
-                <div class="collection collection-vertical collection-shade-3" id="editSection" style="display:none; margin-top:20px;">
+         
+            </div>
+        </div>
+
+        <div class="left-panel">
+            <div class="collection collection-vertical collection-shade-2">
+
+                <h3>Products</h3>
+
+                <div id="productList" style="width:100%"></div>
+
+            </div>
+        </div>
+    </div>
+       <div class="collection collection-vertical collection-shade-3" id="editSection" style="display:none; margin-top:20px;">
                     <h3>Edit Product</h3>
 
                     <form id="editForm" class="form">
@@ -47,28 +61,13 @@
                         <input type="text" id="edit_producer" placeholder="Producer">
                         <input type="number" id="edit_quantity" placeholder="Quantity">
                         <input type="text" id="edit_image" placeholder="Image URL">
-<div id="rfidEditor" class="rfid-editor"></div>
-
-<div class="edit-actions">
+<div id="rfidEditor" class="admin-rfid-editor"></div>
+<div class="admin-edit-actions">
     <button class="button admin-button-blue" type="submit">Save Product Changes</button>
     <button type="button" class="button admin-button-secondary" onclick="closeEdit()">Done / Close</button>
 </div>                        
                     </form>
                 </div>
-            </div>
-        </div>
-
-        <div class="left-panel">
-            <div class="collection collection-vertical collection-shade-2">
-
-                <h3>Products</h3>
-
-                <div id="productList" style="width:100%"></div>
-
-            </div>
-        </div>
-    </div>
-
     <div class="collection collection-shade-3 collection-vertical">
         <h3>Reports</h3>
         <form method="get">
@@ -200,10 +199,17 @@ function renderRfidEditor(p) {
                 </button>
             </div>
 
-            <div class="admin-rfid-add-row">
-                <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
-                <button type="button" class="button admin-button-blue" onclick="scanNextTag()">Scan Tag</button>
-            </div>
+         <div class="admin-rfid-add-row">
+    <input type="text" id="new_manual_epc" placeholder="Enter EPC manually">
+
+    <button type="button" class="button" onclick="addManualRfid()">
+        Add Manual
+    </button>
+
+    <button type="button" class="button admin-button-blue" onclick="scanNextTag()">
+        Scan Tag
+    </button>
+</div>
 
             <div id="scanStatus" class="admin-scan-status"></div>
 
@@ -360,7 +366,7 @@ async function scanNextTag() {
     if (!currentEditingProduct) return;
 
     const status = document.getElementById("scanStatus");
-    status.innerHTML = "Waiting for RFID scan...";
+    status.innerHTML = "Waiting for RFID scan... You have 20 seconds.";
 
     const res = await fetch(`/products/${currentEditingProduct.product_id}/scan-next-tag`, {
         method: "POST"
@@ -377,14 +383,15 @@ async function scanNextTag() {
     showMessage("Scan the RFID tag now", "success");
 
     let tries = 0;
+
     const interval = setInterval(async () => {
         tries++;
 
         await refreshCurrentProduct(false);
 
-        if (tries >= 6) {
+        if (tries >= 20) {
             clearInterval(interval);
-            status.innerHTML = "Scan check finished. If tag did not appear, scan again.";
+            status.innerHTML = "Scan check finished. If tag did not appear, click Scan Tag again.";
         }
     }, 1000);
 }

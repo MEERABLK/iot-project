@@ -1,4 +1,6 @@
 # controller.py
+from unittest import result
+
 from phase1_index import success
 from scripts.sensor_data import data, start as start_mqtt
 from scripts import gpio_controller
@@ -87,10 +89,12 @@ class Controller:
             with self.lock:
                 self.rfid_tags = current_tags
 
-            # 1. Handle newly detected tags
             for tag_epc in current_tags:
-                if tag_epc in self.scanned_epcs:
-                   continue
+                with self.lock:
+                    admin_mode = self.admin_assign_product_id is not None
+
+                if tag_epc in self.scanned_epcs and not admin_mode:
+                    continue
 
                 result = self._handle_tag(tag_epc)
 
@@ -198,6 +202,8 @@ class Controller:
         with self.lock:
             self.admin_assign_product_id = product_id
             self.unknown_tags.clear()
+            self.scanned_epcs.clear()
+
         print(f"Admin mode: next scanned RFID will be assigned to product {product_id}")
 
     def get_receipt(self, customer_id):
