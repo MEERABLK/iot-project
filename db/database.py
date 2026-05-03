@@ -3,6 +3,8 @@ import mysql.connector
 from dotenv import load_dotenv
 import os
 load_dotenv()  # loads variables from .env
+import re
+from datetime import datetime
 
 print("DEBUG: Database file loaded successfully!")
 
@@ -269,7 +271,6 @@ def get_user_points(customer_id):
         return 0
           
 def get_receipt_items(receipt_id):
-    # Fetches all items associated with a specific receipt ID from the database.
     try:
         mydb = mysql.connector.connect(
             host=db_host,
@@ -295,12 +296,7 @@ def get_receipt_items(receipt_id):
     
 def get_receipt_history(customer_id):
     try:
-        mydb = mysql.connector.connect(
-            host=db_host,
-            user=db_user,
-            password=db_password,
-            database="smartstoreiotproject_db"
-        )
+        mydb = get_connection()
         cursor = mydb.cursor(dictionary=True)
         
         cursor.execute("SELECT receipt_id as id, total, points_earned, created_at as date, payment_method FROM receipts WHERE customer_id = %s", (customer_id,))
@@ -343,11 +339,130 @@ def get_receipt_history(customer_id):
         print(f"🚨 Database Error fetching receipt history: {err}")
         return []
 
+def get_products():
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        query = "SELECT p.product_id as id, p.name, i.quantity as qty, i.last_updated FROM products p JOIN inventory i ON p.product_id = i.product_id"
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching products: {err}")
+        return []
+    
+def get_items_by_date(start_date, end_date):
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        query = """
+            SELECT p.product_id as id, p.name, SUM(r.quantity) as sold 
+            FROM receipt_items r 
+            JOIN products p ON r.product_id = p.product_id
+            JOIN receipts rec ON r.receipt_id = rec.receipt_id
+            WHERE 1=1
+        """
+        params = []
+
+        # 2. Filter using the 'rec' alias (the receipts table)
+        if is_valid_date(start_date):
+            query += " AND rec.created_at >= %s"
+            params.append(start_date)
+
+        if is_valid_date(end_date):
+            query += " AND rec.created_at <= %s"
+            params.append(end_date)
+
+        query += " GROUP BY p.product_id, p.name"
+        
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching items: {err}")
+        return []
+    
+def get_customer_activity(start_date, end_date):
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        # 1. Base query using a JOIN so we can see the receipt AND the customer account info
+        query = """
+            SELECT 
+                COUNT(DISTINCT r.customer_id) AS active_customers,
+                
+                -- If their account was created during this window, they are New
+                COUNT(DISTINCT CASE WHEN c.created_at >= %s THEN r.customer_id END) AS new_customers,
+                
+                -- If their account was created before this window, they are Returning
+                COUNT(DISTINCT CASE WHEN c.created_at < %s THEN r.customer_id END) AS returning_customers
+
+            FROM receipts r
+            INNER JOIN customers c ON r.customer_id = c.customer_id
+            WHERE 1=1
+        """
+
+        params = [start_date, start_date] # For the CASE statements
+
+        # 2. Dynamically apply the date filter to the RECEIPTS (when the purchase happened)
+        if is_valid_date(start_date):
+            query += " AND r.created_at >= %s"
+            params.append(start_date)
+
+        if is_valid_date(end_date):
+            query += " AND r.created_at <= %s"
+            params.append(end_date)
+
+        # 3. Execute exactly once
+        cursor.execute(query, tuple(params))
+        report = cursor.fetchone()
+
+        # Now you have report['active_customers'], report['new_customers'], etc.
+
+        cursor.close()
+        mydb.close()
+
+        return report
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Database Error fetching items: {err}")
+        return []
+
+def normalize_name(name):
+    # lowercase + remove spaces + remove special characters
+    return re.sub(r'[^a-z0-9]', '', name.lower())
+
 def add_product(name, category, price, upc_code, producer, quantity, image):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     try:
+        normalized = normalize_name(name)
+
+        # check existing products
+        cursor.execute("SELECT name FROM products")
+        all_products = cursor.fetchall()
+
+        for p in all_products:
+            if normalize_name(p["name"]) == normalized:
+                print("❌ Duplicate product name detected!")
+                return False
+
+        # INSERT (same as before)
         cursor.execute("""
             INSERT INTO products (name, category, price, producer, image)
             VALUES (%s,%s,%s,%s,%s)
@@ -366,45 +481,64 @@ def add_product(name, category, price, upc_code, producer, quantity, image):
         """, (product_id, quantity))
 
         conn.commit()
+        return True
 
     except Exception as e:
         print("add_product error:", e)
         conn.rollback()
+        return False
 
     finally:
         cursor.close()
         conn.close()
 
 def add_rfid_tag(product_id, epc):
-    """
-    Links a physical RFID tag (EPC) to a specific product using its product_id.
-    """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
 
-        # 1. (Optional) Check if this EPC already exists to prevent duplicate errors
-        cursor.execute("SELECT * FROM product_rfid WHERE epc_code = %s", (epc,))
-        if cursor.fetchone():
-            print(f"⚠️ Tag {epc} is already registered to a product.")
-            cursor.close()
-            conn.close()
+    try:
+        epc = epc.strip()
+
+        if not epc:
             return False
 
-        # 2. Insert the new mapping
-        sql = "INSERT INTO product_rfid (product_id, epc_code) VALUES (%s, %s)"
-        cursor.execute(sql, (product_id, epc))
+        cursor.execute("""
+            SELECT epc_code
+            FROM product_rfid
+            WHERE epc_code = %s
+        """, (epc,))
+
+        if cursor.fetchone():
+            print("RFID already exists")
+            return False
+
+        cursor.execute("""
+            INSERT INTO product_rfid (product_id, epc_code)
+            VALUES (%s, %s)
+        """, (product_id, epc))
+
+        cursor.execute("""
+            UPDATE inventory
+            SET quantity = (
+                SELECT COUNT(*)
+                FROM product_rfid
+                WHERE product_id = %s
+            )
+            WHERE product_id = %s
+        """, (product_id, product_id))
 
         conn.commit()
-        print(f"✅ Successfully linked tag {epc} to product ID {product_id}")
-        
-        cursor.close()
-        conn.close()
         return True
 
-    except mysql.connector.Error as err:
-        print(f"🚨 Database Error in add_rfid_tag: {err}")
+    except Exception as e:
+        print("add_rfid_tag error:", e)
+        conn.rollback()
         return False
+
+    finally:
+        cursor.close()
+        conn.close()
+
 
 ## Phase 2 products epc
 def get_product_by_epc(epc):
@@ -519,23 +653,58 @@ def get_all_products():
             p.price,
             p.producer,
             p.image,
-            i.quantity,
+            COALESCE(i.quantity, 0) AS quantity,
             u.upc_code AS upc,
-            COUNT(r.epc_code) AS rfid_count
+            COUNT(r.epc_code) AS rfid_count,
+            GROUP_CONCAT(r.epc_code ORDER BY r.epc_code SEPARATOR ',') AS epcs
         FROM products p
         LEFT JOIN inventory i ON p.product_id = i.product_id
         LEFT JOIN product_upc u ON p.product_id = u.product_id
         LEFT JOIN product_rfid r ON p.product_id = r.product_id
         GROUP BY p.product_id, u.upc_code
+        ORDER BY p.product_id DESC
     """)
 
     results = cursor.fetchall()
 
+    for row in results:
+        row["epcs"] = row["epcs"].split(",") if row["epcs"] else []
+
     cursor.close()
     conn.close()
-
     return results
 
+def delete_rfid_tag(product_id, epc):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            DELETE FROM product_rfid
+            WHERE product_id = %s AND epc_code = %s
+        """, (product_id, epc))
+
+        cursor.execute("""
+            UPDATE inventory
+            SET quantity = (
+                SELECT COUNT(*)
+                FROM product_rfid
+                WHERE product_id = %s
+            )
+            WHERE product_id = %s
+        """, (product_id, product_id))
+
+        conn.commit()
+        return True
+
+    except Exception as e:
+        print("delete_rfid_tag error:", e)
+        conn.rollback()
+        return False
+
+    finally:
+        cursor.close()
+        conn.close()
 
 def delete_product(product_id):
     conn = get_connection()
@@ -561,48 +730,81 @@ def delete_product(product_id):
         cursor.close()
         conn.close()
 
-def update_product(id, name, category, price, upc_code, epc, producer, quantity, image):
+
+
+def update_rfid_tag(product_id, old_epc, new_epc):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     try:
-        # 1. update main product
+        old_epc = old_epc.strip()
+        new_epc = new_epc.strip()
+
+        cursor.execute("""
+            SELECT epc_code
+            FROM product_rfid
+            WHERE epc_code = %s AND epc_code != %s
+        """, (new_epc, old_epc))
+
+        if cursor.fetchone():
+            return False
+
+        cursor.execute("""
+            UPDATE product_rfid
+            SET epc_code = %s
+            WHERE product_id = %s AND epc_code = %s
+        """, (new_epc, product_id, old_epc))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    except Exception as e:
+        print("update_rfid_tag error:", e)
+        conn.rollback()
+        return False
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+def update_product(id, name, category, price, upc_code, producer, image):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        normalized = normalize_name(name)
+
+        cursor.execute("""
+            SELECT product_id, name
+            FROM products
+            WHERE product_id != %s
+        """, (id,))
+
+        for p in cursor.fetchall():
+            if normalize_name(p["name"]) == normalized:
+                return False
+
         cursor.execute("""
             UPDATE products
             SET name=%s, category=%s, price=%s, producer=%s, image=%s
             WHERE product_id=%s
         """, (name, category, price, producer, image, id))
 
-        # 2. update UPC (ONLY UPC)
         cursor.execute("""
             INSERT INTO product_upc (product_id, upc_code)
             VALUES (%s, %s)
             ON DUPLICATE KEY UPDATE upc_code = VALUES(upc_code)
         """, (id, upc_code))
 
-        # 3. update inventory
-        cursor.execute("""
-            UPDATE inventory
-            SET quantity=%s
-            WHERE product_id=%s
-        """, (quantity, id))
-
-        # 4. update RFID (better: replace instead of update 1 row)
-        if epc:
-            cursor.execute("""
-                DELETE FROM product_rfid WHERE product_id=%s
-            """, (id,))
-
-            cursor.execute("""
-                INSERT INTO product_rfid (product_id, epc_code)
-                VALUES (%s, %s)
-            """, (id, epc))
-
         conn.commit()
+        return True
 
     except Exception as e:
         print("UPDATE ERROR:", e)
         conn.rollback()
+        return False
 
     finally:
         cursor.close()
@@ -636,3 +838,16 @@ def verify_user(email, password):
     conn.close()
 
     return user
+
+def is_valid_date(date_str):
+    # 1. Check for None or empty string ""
+    if not date_str:
+        return False
+        
+    # 2. Try to parse it against the HTML5 standard format
+    try:
+        datetime.strptime(date_str.strip(), '%Y-%m-%d')
+        return True
+    except ValueError:
+        # It was a string, but not a valid date format
+        return False

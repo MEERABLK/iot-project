@@ -135,6 +135,7 @@ button {
 
     border-radius: 25px;
     padding: 10px 25px;
+    margin: 5px;
     
     transition: 0.2s ease;
 }
@@ -236,8 +237,6 @@ button {
     font-size: 2rem;
 }
 
-
-
 .dashboard {
     display: flex;
     width: 90%;
@@ -308,15 +307,18 @@ button {
 .pdf {
     display: block;
     background-color: white;
-    font-family: monospace;
     color: black;
-    padding: 0 64px;
+    padding: 0 96px;
     width: 8.5in;
     margin: 0;
 }
 
+.pdf-monospace {
+    font-family: monospace;
+}
+
 .pdf pre {
-    padding-top: 64px;
+    padding-top: 96px;
 }
 
 .pdf h1,
@@ -366,4 +368,207 @@ button {
   color: black;
   padding: 8px;
   border: 1px solid black;
+}
+
+/* admin html */
+/* ===== New Admin UI only: no old class overrides ===== */
+
+.admin-product-card-inner {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    width: 100%;
+    align-items: center;
+}
+
+.admin-product-main {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-product-img {
+    width: 75px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 15px;
+}
+
+.admin-product-img-empty {
+    background: #ffe3bf;
+    color: #b16940;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+}
+
+.admin-product-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+}
+
+.admin-product-meta,
+.admin-product-stats {
+    font-size: 13px;
+    color: white;
+}
+
+.admin-rfid-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.admin-rfid-chip {
+    background: #ffe3bf;
+    color: #7a3f25;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.admin-rfid-chip-more {
+    background: #b16940;
+    color: white;
+}
+
+.admin-rfid-empty {
+    font-size: 12px;
+    color: white;
+}
+
+.admin-product-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-rfid-editor {
+    width: 100%;
+}
+
+.admin-rfid-panel {
+    width: 100%;
+    background: rgba(255,255,255,0.25);
+    border-radius: 18px;
+    padding: 15px;
+    margin-top: 12px;
+}
+
+.admin-rfid-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-rfid-panel-header h4 {
+    margin: 0;
+    color: white;
+}
+
+.admin-rfid-panel-header small {
+    color: white;
+}
+
+.admin-rfid-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.admin-rfid-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-rfid-edit-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255,255,255,0.35);
+    padding: 10px;
+    border-radius: 14px;
+}
+
+.admin-rfid-edit-row input {
+    font-family: monospace;
+}
+
+.admin-rfid-empty-box {
+    color: white;
+    padding: 10px;
+}
+
+.admin-scan-status {
+    color: white;
+    font-weight: bold;
+    margin: 8px 0;
+}
+
+.admin-edit-actions {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+}
+
+.admin-button-danger {
+    background: #ff6b6b;
+}
+
+.admin-button-blue {
+    background: #4dabf7;
+}
+
+.admin-button-secondary {
+    background: #999;
+}
+
+/* ===== Admin edit form layout fix ===== */
+
+#editSection {
+    width: 90%;
+    max-width: 900px;
+}
+
+#editForm {
+    width: 100%;
+    max-width: 820px;
+}
+
+#editForm input {
+    box-sizing: border-box;
+}
+
+#editForm > input {
+    flex: 1 1 280px;
+}
+
+#editForm > input[type="hidden"] {
+    display: none;
+}
+
+.admin-rfid-panel {
+    box-sizing: border-box;
+}
+
+.admin-rfid-add-row input {
+    min-width: 260px;
+}
+
+.admin-rfid-edit-row input {
+    min-width: 280px;
+}
+
+.admin-edit-actions {
+    width: 100%;
+    display: flex;
+    gap: 10px;
 }

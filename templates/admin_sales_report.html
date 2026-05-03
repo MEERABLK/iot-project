@@ -1,0 +1,107 @@
+{% extends "components/base.html" %}
+
+{% block title %}Receipt History{% endblock %}
+
+{% block content %}
+<body>
+    {% with url=url_for('admin') %}
+        {% include 'components/back_button.html' %}
+    {% endwith %}
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <button onclick="generatePDF()" class=" button button-top-right">
+        <h3>Download PDF</h3>   
+    </button>
+    
+    <div id="pdf-wrapper">
+        <h1>Sales Report</h1>
+
+        {% if items %}
+            {# Define sorted_items immediately so it's available for the cards below #}
+            {% set sorted_items = items | sort(attribute='sold', reverse=True) %}
+            
+            <!-- <div class="collection collection-shade-1" style="display: flex; gap: 20px; margin-bottom: 20px; padding: 15px;">
+                <div class="collection collection-shade-2" style="flex: 1; padding: 10px; border-left: 5px solid #4CAF50;">
+                    <h3 style="margin-top: 0;">🔥 Most Sold</h3>
+                    <div><strong>{{ sorted_items[0].name }}</strong></div>
+                    <div>{{ sorted_items[0].sold }} Units Sold</div>
+                </div>
+                <div class="collection collection-shade-2" style="flex: 1; padding: 10px; border-left: 5px solid #F44336;">
+                    <h3 style="margin-top: 0;">❄️ Least Sold</h3>
+                    <div><strong>{{ sorted_items[-1].name }}</strong></div>
+                    <div>{{ sorted_items[-1].sold }} Units Sold</div>
+                </div>
+            </div> -->
+
+
+            <div class="pdf">
+                <div class="" style="display: flex; gap: 20px; margin-bottom: 20px; padding: 15px;">
+                    <h3 style="margin-top: 0;">🔥 Most Sold</h3>
+                        <div><strong>{{ sorted_items[0].name }}</strong></div>
+                        <div>{{ sorted_items[0].sold }} Units Sold</div>
+                    <h3 style="margin-top: 0;">❄️ Least Sold</h3>
+                    <div><strong>{{ sorted_items[-1].name }}</strong></div>
+                    <div>{{ sorted_items[-1].sold }} Units Sold</div>
+                </div>
+                
+                <table id="salesTable" class="pdf table">
+                    <thead>
+                        <tr>
+                            <th>Product ID</th>
+                            <th>Product Name</th>
+                            <th>Quantity Sold</th>
+                            <th>Period</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.id }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.sold }}</td>
+                            <td>{{ start_date }} - {{ end_date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="collection collection-shade-1">
+                <p>No sales data found for this period.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        $(document).ready( function () {
+            $('#salesTable').DataTable({
+                "order": [[ 2, "desc" ]], 
+                "paging": false,          
+                "info": false,
+                "searching": true
+            });
+        });
+
+        function generatePDF() {
+            window.scrollTo(0, 0);
+
+            // Export the specific container including title and stats
+            const element = document.getElementById('pdf-export-container');
+
+            const options = {
+                margin:       0.5, 
+                filename:     'Sales_Report_{{ start_date }}.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, 
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(options).from(element).save();
+        }
+    </script>
+</body>
+{% endblock %}

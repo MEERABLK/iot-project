@@ -1,0 +1,65 @@
+{% extends "components/base.html" %}
+
+{% block title %}Receipt History{% endblock %}
+
+{% block content %}
+<body>
+    {% with url=url_for('admin') %}
+        {% include 'components/back_button.html' %}
+    {% endwith %}
+
+    <button onclick="generatePDF()" class=" button button-top-right">
+        <h3>Download PDF</h3>
+    </button>
+    
+    <h1>Inventory Report</h1>
+    
+    <div class="pdf-wrapper">
+        <div id="pdf" class="pdf">
+            <h1>Inventory Report</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Product Name</th>
+                        <th>Available Quantity</th>
+                        <th>Last Restocked</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.id }}</td>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.qty }}</td>
+                        <td>{{ product.last_updated }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        function generatePDF() {
+            window.scrollTo(0, 0);
+
+            const element = document.getElementById('pdf');
+
+            const options = {
+                margin:       0, 
+                filename:     'my_receipt.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, 
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            // 3. Generate and save the PDF
+            html2pdf().set(options).from(element).save();
+        }
+    </script>
+</body>
+
+{% endblock %}

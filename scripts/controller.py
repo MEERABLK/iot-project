@@ -1,6 +1,9 @@
 # controller.py
+from unittest import result
+
+from phase1_index import success
 from scripts.sensor_data import data, start as start_mqtt
-# from scripts import gpio_controller
+from scripts import gpio_controller
 from scripts import send_email
 # import index
 import threading
@@ -32,7 +35,9 @@ class Controller:
         self.fridge1_alert_sent = False
         self.checkout_locked = False
         # self.checkout_mode = False
-        # 🌡️ Sensor & Threshold Data
+        self.admin_scan_mode = False
+        #  Sensor & Threshold Data
+        self.admin_assign_product_id = None
         self.state = "SHOPPING"
         self.data = data
         self.thresholds = {
@@ -72,7 +77,7 @@ class Controller:
         threading.Thread(target=self._rfid_background_task, daemon=True).start()
         # start barcode listener
         threading.Thread(target=self.barcode_listener, daemon=True).start()
-
+    
     #===RFID==
     def _rfid_background_task(self):
         """Syncs the controller state and the cart with the physical scanner."""
@@ -85,10 +90,12 @@ class Controller:
             with self.lock:
                 self.rfid_tags = current_tags
 
-            # 1. Handle newly detected tags
             for tag_epc in current_tags:
-                if tag_epc in self.scanned_epcs:
-                   continue
+                with self.lock:
+                    admin_mode = self.admin_assign_product_id is not None
+
+                if tag_epc in self.scanned_epcs and not admin_mode:
+                    continue
 
                 result = self._handle_tag(tag_epc)
 
@@ -103,67 +110,53 @@ class Controller:
                     print(f"🗑️ Tag {tag_epc} removed from scanner & cart")
 
     #===core logic===
+  
     def _handle_tag(self, tag_epc):
-        if self.state != "SHOPPING":
-            return None
         try:
-            # 1. Safety check for the database attribute and perform lookup
-            # This prevents the "module has no attribute" crash
-            product = None
-            if hasattr(database, 'get_product_by_epc'):
-                product = database.get_product_by_epc(tag_epc)
-            else:
-                print("🚨 Error: database.py is missing 'get_product_by_epc' function!")
-                return None
+            with self.lock:
+                assign_product_id = self.admin_assign_product_id
+                admin_scan_mode = self.admin_scan_mode
 
-            # 2. Handle Unregistered Tags
+        # 🔥 ADMIN MULTI-SCAN MODE
+            if admin_scan_mode and assign_product_id is not None:
+                success = database.add_rfid_tag(assign_product_id, tag_epc)
+
+                if success:
+                    print(f"Admin assigned RFID {tag_epc} to product {assign_product_id}")
+                    return {"status": "admin_assigned", "epc": tag_epc}
+
+                print(f"Admin failed to assign RFID {tag_epc}")
+                return {"error": "admin_assign_failed", "epc": tag_epc}
+
+        # 🔥 NORMAL SHOPPING MODE
+            product = database.get_product_by_epc(tag_epc)
+
             if not product:
                 print(f"⚠️ Unregistered tag detected: {tag_epc}")
                 with self.lock:
                     if tag_epc not in self.unknown_tags:
                         self.unknown_tags.append(tag_epc)
-                        # Trigger a SocketIO emit here if you want the Admin UI 
-                        # to update the list of unknown tags in real-time.
                 return {"error": "unknown_tag", "epc": tag_epc}
 
-            # 3. Prevent Double-Scanning of the same physical item
-            # Note: Ensure self.scanned_epcs = set() is in your __init__
-            with self.lock:
-                if not hasattr(self, 'scanned_epcs'):
-                    self.scanned_epcs = set()
-                    
-                if tag_epc in self.scanned_epcs:
-                    # We return a dummy dict so the background task knows 
-                    # this tag is "known" and shouldn't be added to unknown_tags
-                    return {"status": "already_scanned"}
-                
-                self.scanned_epcs.add(tag_epc)
-
-            # 4. Add to cart based on Product data
             pid = product.get('product_id')
-            name = product.get('name', 'Unknown Item')
-            price = float(product.get('price', 0.0))
-            
+            name = product.get('name')
+            price = float(product.get('price', 0))
+
             with self.lock:
                 if pid in self.cart:
-                   # prevent accidental double increment within same second
-                   if time.time() - self.cart[pid].get("last_added", 0) < 1:
-                       return product
-                   self.cart[pid]['qty'] += 1
-                   self.cart[pid]['last_added'] = time.time()
+                    self.cart[pid]['qty'] += 1
                 else:
                     self.cart[pid] = {
                         "name": name,
                         "price": price,
-                        "qty": 1,
-                        "upc": product.get('upc')
+                        "qty": 1
                     }
 
-            print(f"✅ Scanned {name} (${price})")
+            print(f"Added {name} to cart")
             return product
 
         except Exception as e:
-            print(f"🚨 Handle Tag Exception: {e}")
+            print("Handle tag error:", e)
             return None
         
     def get_unknown_tags(self):
@@ -175,6 +168,24 @@ class Controller:
         with self.lock:
             self.unknown_tags = []
 
+
+    def start_admin_tag_assignment(self, product_id):
+        with self.lock:
+            self.admin_assign_product_id = product_id
+            self.admin_scan_mode = True
+            self.scanned_epcs.clear()
+            self.unknown_tags.clear()
+
+        print(f"ADMIN SCAN MODE ON for product {product_id}")
+
+    def stop_admin_tag_assignment(self):
+        with self.lock:
+            self.admin_assign_product_id = None
+            self.admin_scan_mode = False
+            self.scanned_epcs.clear()
+
+        print("ADMIN SCAN MODE OFF")
+        
     def get_receipt(self, customer_id):
         """
         Finalizes transaction and stores the receipt details internally.
@@ -390,13 +401,13 @@ class Controller:
                 # ===== CHECK FOR REPLY =====
                 elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
                     print("🔥 Turning ON fan")
-                    # gpio_controller.spinMotor()
+                    gpio_controller.spinMotor()
                     self.toggle_on(1)
                     self.toggle_on(2)
                     time.sleep(5)
-                    # gpio_controller.stopMotor()
-                    # self.toggle_off(1)
-                    # self.toggle_off(2)
+                    gpio_controller.stopMotor()
+                    self.toggle_off(1)
+                    self.toggle_off(2)
                     
 
                     self.fridge1_alert_sent = False  # reset after action

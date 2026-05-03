@@ -131,6 +131,25 @@ def checkout():
 def admin():
     return render_template('admin.html')
 
+@app.route('/admin/inventory-report')
+def admin_inv_report():
+    products = data.get_products()
+    return render_template('admin_inv_report.html', products=products)
+
+@app.route('/admin/sales-report')
+def admin_sales_report():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    items = data.get_items_by_date(start_date, end_date)
+    return render_template('admin_sales_report.html', items = items, start_date = start_date, end_date = end_date)
+
+@app.route('/admin/customer-report')
+def admin_customer_report():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    activity = data.get_customer_activity(start_date, end_date)
+    return render_template('admin_customer_report.html', activity = activity, start_date = start_date, end_date = end_date)
+
 @app.route('/products', methods=['GET'])
 def get_products():
     try:
@@ -170,22 +189,89 @@ def update_product(id):
     try:
         req = request.get_json()
 
-        name = req.get('name')
-        category = req.get('category')
-        price = req.get('price')
-        upc = req.get('upc')
-        epc = req.get('epc')
-        producer = req.get('producer')
-        quantity = req.get('quantity')
-        image = req.get('image')
+        success = data.update_product(
+            id,
+            req.get('name'),
+            req.get('category'),
+            req.get('price'),
+            req.get('upc'),
+            req.get('producer'),
+            req.get('image')
+        )
 
-        data.update_product(id, name, category, price, upc, epc, producer, quantity, image)
+        if not success:
+            return jsonify({"error": "Product update failed"}), 400
 
         return jsonify({"message": "Product updated"})
 
     except Exception as e:
-        print("🔥 UPDATE ERROR:", e)
+        print("UPDATE ERROR:", e)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/products/<int:id>/rfids', methods=['POST'])
+def add_manual_rfid(id):
+    try:
+        req = request.get_json()
+        epc = req.get("epc", "").strip()
+
+        if not epc:
+            return jsonify({"error": "Missing EPC"}), 400
+
+        success = data.add_rfid_tag(id, epc)
+
+        if not success:
+            return jsonify({"error": "Could not add RFID. It may already exist."}), 400
+
+        return jsonify({"message": "RFID added"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/products/<int:id>/rfids/<old_epc>', methods=['PUT'])
+def update_rfid(id, old_epc):
+    try:
+        req = request.get_json()
+        new_epc = req.get("epc", "").strip()
+
+        if not new_epc:
+            return jsonify({"error": "Missing new EPC"}), 400
+
+        success = data.update_rfid_tag(id, old_epc, new_epc)
+
+        if not success:
+            return jsonify({"error": "Could not update RFID"}), 400
+
+        return jsonify({"message": "RFID updated"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/products/<int:id>/rfids/<epc>', methods=['DELETE'])
+def delete_rfid(id, epc):
+    try:
+        success = data.delete_rfid_tag(id, epc)
+
+        if not success:
+            return jsonify({"error": "Could not delete RFID"}), 400
+
+        return jsonify({"message": "RFID deleted"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/stop-scan-tags', methods=['POST'])
+def stop_scan_tags():
+    controller.stop_admin_tag_assignment()
+    return jsonify({"message": "Scan mode stopped"})
+
+@app.route('/products/<int:id>/scan-next-tag', methods=['POST'])
+def scan_next_tag(id):
+    controller.start_admin_tag_assignment(id)
+    return jsonify({"message": "Scan the RFID tag now"})
+
 
 
 @app.route('/products/<int:id>', methods=['DELETE'])
