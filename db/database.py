@@ -540,6 +540,30 @@ def add_rfid_tag(product_id, epc):
         cursor.close()
         conn.close()
 
+def get_low_stock_items(threshold=5):
+    try:
+        mydb = get_connection()
+        cursor = mydb.cursor(dictionary=True)
+        
+        # Query items where quantity is at or below the threshold
+        query = """
+            SELECT p.name, i.quantity 
+            FROM inventory i 
+            JOIN products p ON i.product_id = p.product_id 
+            WHERE i.quantity <= %s
+        """
+        
+        cursor.execute(query, (threshold,))
+        results = cursor.fetchall()
+
+        cursor.close()
+        mydb.close()
+        return results
+
+    except mysql.connector.Error as err:
+        print(f"🚨 Error checking low stock: {err}")
+        return []
+
 
 ## Phase 2 products epc
 def get_product_by_epc(epc):

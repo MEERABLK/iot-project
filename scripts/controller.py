@@ -175,6 +175,37 @@ class Controller:
         with self.lock:
             self.unknown_tags = []
 
+    def notify_admin_low_stock(self, low_stock_items):
+        """Sends an email alert to the admin regarding low stock items."""
+        admin_email = "jonathan.markovic@outlook.com" # Change to your actual admin email
+        
+        # Format the item list for the email body
+        items_list_str = ""
+        for item in low_stock_items:
+            items_list_str += f"- {item['name']}: {item['quantity']} remaining\n"
+
+        subject = "⚠️ LOW STOCK ALERT - Smart Store"
+        body = f"""
+Attention Admin,
+        
+The following items have fallen below the inventory threshold after the last purchase:        
+{items_list_str}
+        
+Please restock these items soon.
+        
+Best regards,
+Smart Store System
+        """
+        
+        # Use your existing email sending logic
+        # Example assuming you have a send_email helper:
+        # subject, body, sender, recipients, password
+        try:
+            send_email.send_email(subject, body, EMAIL_ADDRESS, admin_email, EMAIL_PASSWORD)
+            print(f"📧 Low stock email sent to {admin_email}")
+        except Exception as e:
+            print(f"❌ Failed to send admin alert: {e}")
+
 
     def start_admin_tag_assignment(self, product_id):
         with self.lock:
