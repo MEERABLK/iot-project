@@ -575,6 +575,8 @@ button {
 
 /* ===== Sales report page ===== */
 
+/* ===== Professional black & white sales report ===== */
+
 .report-page {
     width: 100%;
     display: flex;
@@ -586,22 +588,22 @@ button {
     width: 85%;
     max-width: 1000px;
     background: white;
-    color: #7a3f25;
-    border-radius: 25px;
+    color: black;
+    border-radius: 12px;
     padding: 35px;
-    box-shadow: 0 8px 24px rgba(122, 63, 37, 0.18);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .report-title {
     font-size: 3rem;
     margin: 0;
-    color: #b16940;
     text-align: center;
+    color: black;
 }
 
 .report-period {
     text-align: center;
-    color: #8f5b3a;
+    color: #333;
     font-weight: bold;
     margin-bottom: 25px;
 }
@@ -614,24 +616,27 @@ button {
 
 .summary-card {
     flex: 1;
-    background: #ffedd2;
-    border-radius: 20px;
+    border: 2px solid black;
+    border-radius: 10px;
     padding: 20px;
     text-align: center;
+    background: white;
 }
 
 .summary-card h3 {
-    color: #b16940;
-    font-size: 1.5rem;
+    color: black;
+    font-size: 1.3rem;
+    margin-bottom: 10px;
 }
 
 .summary-name {
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    color: black;
 }
 
 .summary-value {
-    color: #8f5b3a;
+    color: #333;
 }
 
 .table-wrapper {
@@ -641,25 +646,60 @@ button {
 .report-table {
     width: 100%;
     border-collapse: collapse;
+    background: white;
 }
 
 .report-table th {
-    background: #b16940;
+    background: black;
     color: white;
     padding: 12px;
+    border: 1px solid black;
 }
 
 .report-table td {
-    color: #7a3f25;
+    color: black;
     padding: 12px;
-    border-bottom: 1px solid #ffd595;
+    border: 1px solid black;
+}
+
+.report-table tr:nth-child(even) {
+    background: #f5f5f5;
 }
 
 .empty-report {
-    background: #ffedd2;
-    color: #7a3f25;
+    border: 2px solid black;
+    color: black;
     padding: 25px;
-    border-radius: 20px;
+    border-radius: 10px;
     text-align: center;
     font-weight: bold;
+    background: white;
+}
+
+/* Better PDF printing */
+@media print {
+
+    body {
+        background: white !important;
+    }
+
+    .button,
+    .button-top-right,
+    .button-back {
+        display: none !important;
+    }
+
+    .report-card {
+        box-shadow: none;
+        border: none;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .report-table th {
+        background: black !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
