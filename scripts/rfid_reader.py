@@ -4,7 +4,7 @@
 import serial
 import time
 
-def get_rfid_tags(timeout=60.0):
+def get_rfid_tags(timeout=15.0):
     try:
         ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.1)
     except serial.SerialException:
