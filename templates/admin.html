@@ -259,13 +259,18 @@ document.getElementById("addForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-        showMessage(data.error || "Something went wrong", "error");
-        return;
-    }
+    showMessage(data.error || "Product was not added", "error");
+    return;
+}
 
-    showMessage("Product added successfully", "success");
-    e.target.reset();
-    loadProducts();
+if (!data.message || data.message !== "Product added") {
+    showMessage(data.error || "Product was not added", "error");
+    return;
+}
+
+showMessage("Product added successfully", "success");
+e.target.reset();
+loadProducts();
 });
 
 document.getElementById("editForm").addEventListener("submit", async (e) => {

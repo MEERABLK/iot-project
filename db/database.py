@@ -454,16 +454,24 @@ def add_product(name, category, price, upc_code, producer, quantity, image):
     try:
         normalized = normalize_name(name)
 
-        # check existing products
         cursor.execute("SELECT name FROM products")
         all_products = cursor.fetchall()
 
         for p in all_products:
             if normalize_name(p["name"]) == normalized:
-                print("❌ Duplicate product name detected!")
+                print("Duplicate product name detected")
                 return False
 
-        # INSERT (same as before)
+        cursor.execute("""
+            SELECT product_id
+            FROM product_upc
+            WHERE upc_code = %s
+        """, (upc_code,))
+
+        if cursor.fetchone():
+            print("Duplicate UPC detected")
+            return False
+
         cursor.execute("""
             INSERT INTO products (name, category, price, producer, image)
             VALUES (%s,%s,%s,%s,%s)
