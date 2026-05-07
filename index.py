@@ -167,19 +167,22 @@ def add_product():
         category = req.get('category')
         price = req.get('price')
         upc = req.get('upc')
-        # epc = req.get('epc')
         producer = req.get('producer')
         quantity = req.get('quantity')
         image = req.get('image')
 
-        if not all([name, category, price, upc, producer, quantity]):            return jsonify({"error": "Missing fields"}), 400
+        if not all([name, category, price, upc, producer, quantity]):
+            return jsonify({"error": "Missing fields"}), 400
 
-        data.add_product(name, category, price, upc, producer, quantity, image)
+        success = data.add_product(name, category, price, upc, producer, quantity, image)
+
+        if not success:
+            return jsonify({"error": "Product name or UPC already exists"}), 400
 
         return jsonify({"message": "Product added"}), 201
 
     except Exception as e:
-        print("ERROR:", e) 
+        print("ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
        
