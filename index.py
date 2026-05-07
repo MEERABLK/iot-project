@@ -406,31 +406,33 @@ def complete_purchase():
         customer_id = session.get('user_id', 1) 
         customer_email = data_req.get('email')
 
-        # 1. Get points and calculate discount percentage
         current_points = data.get_user_points(customer_id)
-        # 1000 points = 0.01 (1%), 2000 = 0.02 (2%), etc.
+        # 1000 points = 1% discount
         discount_percent = (current_points // 1000) * 0.01
         
-        # Optional: Cap the discount at 50%
+        # Cap the discount at 50%
         if discount_percent > 0.50:
             discount_percent = 0.50
 
-        # 2. Tell the controller to process with this discount
-        # Note: You'll need to update your controller.py method to accept this!
+        # 1. Process Checkout (Decrements inventory in DB)
         receipt_id = controller.process_final_checkout(customer_id, discount_percent)
         
         if not receipt_id:
             return jsonify({"status": "error", "message": "Transaction failed"}), 400
 
-        # 3. Send email (the receipt logic we built earlier)
+        # 2. Check Inventory Thresholds
+        threshold = 1
+        low_stock_items = data.get_low_stock_items(threshold)
+        
+        # 3. 🔥 NEW: Trigger Admin Email Alert
+        if low_stock_items:
+            controller.notify_admin_low_stock(low_stock_items)
+
+        # 4. Send Customer Receipt
         if customer_email:
             controller.send_receipt(customer_email)
 
-        return jsonify({
-            "status": "success", 
-            "message": f"Success! Applied {int(discount_percent*100)}% discount.",
-            "receipt_id": receipt_id
-        })
+        return jsonify({"status": "success", "receipt_id": receipt_id})
 
     except Exception as e:
         print(f"Checkout Error: {e}")
