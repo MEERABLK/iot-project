@@ -16,7 +16,9 @@ db_password = os.getenv("DB_PASSWORD")
 
 
 def get_connection():
+
     return mysql.connector.connect(
+        # computer/server where the MySQL database is running
         host=db_host,
         user=db_user,
         password=db_password,
@@ -53,7 +55,7 @@ def get_threshold(fridge_name):
         return float(result[0]) if result else 8.0
 
     except Exception as e:
-        print(f"🚨 Error fetching latest threshold for {fridge_name}: {e}")
+        print(f" Error fetching latest threshold for {fridge_name}: {e}")
         return 8.0
     
 def set_threshold(fridge_name, threshold_value):
@@ -67,7 +69,8 @@ def set_threshold(fridge_name, threshold_value):
              host=db_host, user=db_user, password=db_password, database="smartstoreiotproject_db"
         )
         mycursor = mydb.cursor()
-
+# Using %s prevents SQL injection
+# %s are placeholders for values in a SQL query
         sql = """
             INSERT INTO thresholds (fridge_name, temperature_threshold) 
             VALUES (%s, %s) 
@@ -132,14 +135,14 @@ def create_receipt(customer_id, cart, discount_percent=0.0):
             stock = cursor.fetchone()
 
             if not stock:
-                print(f"❌ Product {pid} not found in inventory")
+                print(f" Product {pid} not found in inventory")
                 db.rollback()
                 return None
 
             available = stock['quantity']
 
             if item['qty'] > available:
-                print(f"❌ Not enough stock for product {pid}")
+                print(f" Not enough stock for product {pid}")
                 db.rollback()
                 return None
 
@@ -245,7 +248,7 @@ def create_receipt(customer_id, cart, discount_percent=0.0):
         return None
 
 def get_user_points(customer_id):
-    # 🛑 GUEST CHECK: If no ID is provided, they have 0 points
+    #  GUEST CHECK: If no ID is provided, they have 0 points
     if customer_id is None:
         return 0
 
@@ -268,7 +271,7 @@ def get_user_points(customer_id):
         return result['points'] if result else 0
 
     except mysql.connector.Error as err:
-        print(f"🚨 Database Error fetching points: {err}")
+        print(f" Database Error fetching points: {err}")
         return 0
           
 def get_receipt_items(receipt_id):
@@ -337,7 +340,7 @@ def get_receipt_history(customer_id):
         return receipt_list
 
     except mysql.connector.Error as err:
-        print(f"🚨 Database Error fetching receipt history: {err}")
+        print(f" Database Error fetching receipt history: {err}")
         return []
 
 def get_products():
@@ -356,7 +359,7 @@ def get_products():
         return results
 
     except mysql.connector.Error as err:
-        print(f"🚨 Database Error fetching products: {err}")
+        print(f" Database Error fetching products: {err}")
         return []
     
 def get_items_by_date(start_date, end_date):
@@ -674,6 +677,7 @@ def reduce_stock(product_id, qty):
     cursor.close()
     db.close()
 
+# used to fetch in admin side 
 def get_all_products():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -744,7 +748,7 @@ def delete_product(product_id):
     cursor = conn.cursor()
 
     try:
-        # 🔥 DELETE ALL DEPENDENCIES FIRST
+        #  DELETE ALL DEPENDENCIES FIRST
 
         cursor.execute("DELETE FROM receipt_items WHERE product_id = %s", (product_id,))
         cursor.execute("DELETE FROM product_rfid WHERE product_id = %s", (product_id,))
@@ -756,7 +760,7 @@ def delete_product(product_id):
         conn.commit()
 
     except Exception as e:
-        print("❌ Delete error:", e)
+        print(" Delete error:", e)
         conn.rollback()
 
     finally:

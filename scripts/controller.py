@@ -27,8 +27,9 @@ print("LOADED EMAIL:", EMAIL_ADDRESS)
 
 
 class Controller:
+    # self is current instance of class the object access its own variables and functions
     def __init__(self, toggle_on, toggle_off):
-        # 📧 Email & Alert Configuration
+        #  Email & Alert Configuration
         self.email_address = EMAIL_ADDRESS 
         self.email_password = EMAIL_PASSWORD
         self.last_email_time = time.time()
@@ -52,20 +53,20 @@ class Controller:
             "status": "Offline"
         }
 
-        # ⚙️ Hardware Controls
+        # Hardware Controls
         self.toggle_on = toggle_on
         self.toggle_off = toggle_off
         self.lock = threading.Lock()
 
-        # 🛰️ RFID & Cart Logic
+        # RFID & Cart Logic
         self.rfid_tags = []         # Current tags physically on the scanner
         # Scanned EPCs
         self.scanned_epcs = set()
         self.unknown_tags = [] # unknown tags to be used for adding epcs to the database
-        self.cart_check_list = set() # 👈 ADDED: Tracks "active" tags to prevent double-scanning
+        self.cart_check_list = set() #  ADDED: Tracks "active" tags to prevent double-scanning
         self.cart = {}              # Stores product info and quantities
         self.carts = {}             # For historical or multiple cart tracking
-        self.last_receipt = None  # 👈 Initialized as None
+        self.last_receipt = None  #  Initialized as None
 
     def start(self):
         # Start MQTT listener
@@ -109,23 +110,29 @@ class Controller:
                     self.cart_check_list.remove(tag_epc)
                     print(f"🗑️ Tag {tag_epc} removed from scanner & cart")
 
-    #===core logic===
+    #===core logic handles rfid scans===
   
     def _handle_tag(self, tag_epc):
+
+        # one rfid tag handle
         tag_epc = tag_epc.strip() 
     
-        # 🛑 PROTECTION: If the tag is weirdly long, don't even try to DB it
+        # PROTECTION: If the tag is weirdly long, don't even try to DB it
         if len(tag_epc) > 64: # Adjust based on your actual EPC length
             print(f"Skipping malformed tag burst: {tag_epc[:20]}...")
             return None
         
         try:
+            # Skips bad RFID data so it does not crash or insert garbage into the database
             with self.lock:
+                # Locks shared variables so another thread cannot change them at the same time
                 assign_product_id = self.admin_assign_product_id
                 admin_scan_mode = self.admin_scan_mode
 
-        # 🔥 ADMIN MULTI-SCAN MODE
+        #  ADMIN MULTI-SCAN MODE copies the current admin mode settings safely
             if admin_scan_mode and assign_product_id is not None:
+
+# Checks if the admin is scanning tags to assign them to a product
                 success = database.add_rfid_tag(assign_product_id, tag_epc)
 
                 if success:
@@ -135,22 +142,24 @@ class Controller:
                 print(f"Admin failed to assign RFID {tag_epc}")
                 return {"error": "admin_assign_failed", "epc": tag_epc}
 
-        # 🔥 NORMAL SHOPPING MODE
+        #  NORMAL SHOPPING MODE
+        # In normal shopping mode, searches the database for the product linked to the RFID tag
             product = database.get_product_by_epc(tag_epc)
 
             if not product:
-                print(f"⚠️ Unregistered tag detected: {tag_epc}")
+                print(f" Unregistered tag detected: {tag_epc}")
                 with self.lock:
                     if tag_epc not in self.unknown_tags:
                         self.unknown_tags.append(tag_epc)
                 return {"error": "unknown_tag", "epc": tag_epc}
-
+# Gets the product ID, name, and price from the database result
             pid = product.get('product_id')
             name = product.get('name')
             price = float(product.get('price', 0))
-
+# Locks the cart before editing it
             with self.lock:
                 if pid in self.cart:
+                    # If the product is already in the cart, increase its quantity
                     self.cart[pid]['qty'] += 1
                 else:
                     self.cart[pid] = {
@@ -202,15 +211,20 @@ Smart Store System
         # subject, body, sender, recipients, password
         try:
             send_email.send_email(subject, body, EMAIL_ADDRESS, admin_email, EMAIL_PASSWORD)
-            print(f"📧 Low stock email sent to {admin_email}")
+            print(f"Low stock email sent to {admin_email}")
         except Exception as e:
-            print(f"❌ Failed to send admin alert: {e}")
+            print(f" Failed to send admin alert: {e}")
 
-
+# Defines a function that starts admin RFID assignment mode for a specific product
     def start_admin_tag_assignment(self, product_id):
+        # Lock shared variables so multiple threads cannot modify them at the same time
         with self.lock:
+            # Stores the product ID that future RFID tags will be linked to
             self.admin_assign_product_id = product_id
+            # Turns on admin scan mode.
             self.admin_scan_mode = True
+            # Clears previously scanned RFID tags from memory
+            # This prevents old scans from interfering with the new assignment session
             self.scanned_epcs.clear()
             self.unknown_tags.clear()
 
@@ -218,10 +232,13 @@ Smart Store System
 
     def stop_admin_tag_assignment(self):
         with self.lock:
+            # Removes the currently selected product ID
             self.admin_assign_product_id = None
+            # Turns admin scan mode OFF
             self.admin_scan_mode = False
+
             self.scanned_epcs.clear()
-            self.unknown_tags.clear() # 👈 Add this to clear the "ghost" tags
+            self.unknown_tags.clear() #to clear the "ghost" tags
             
         # If your RFID reader class has a flush method, call it here
         # self.reader.flush() 
@@ -234,7 +251,7 @@ Smart Store System
         """
         current_cart = self.get_cart()
         if not current_cart:
-            print("🛒 Cannot create receipt: Cart is empty.")
+            print(" Cannot create receipt: Cart is empty.")
             return None
 
         # 1. Save to DB
@@ -268,7 +285,7 @@ Smart Store System
         """
         # 1. Check if a receipt exists in memory
         if not hasattr(self, 'last_receipt') or self.last_receipt is None:
-            print("🚨 Error: No recent receipt found to send. Run get_receipt() first.")
+            print("Error: No recent receipt found to send. Run get_receipt() first.")
             return
 
         receipt_data = self.last_receipt
@@ -316,7 +333,7 @@ Smart Store System
     def add_by_barcode(self, upc):
        
         if self.checkout_locked:
-            print("⛔ Barcode ignored (checkout locked)")
+            print(" Barcode ignored (checkout locked)")
             return None
         """
         Manually adds an item to the cart using its barcode/UPC.
@@ -326,7 +343,7 @@ Smart Store System
             product = database.get_product_by_upc(upc)
 
             if not product:
-                print(f"⚠️ Unknown Barcode: {upc}")
+                print(f" Unknown Barcode: {upc}")
                 return {"error": "unknown_barcode", "upc": upc}
 
             pid = product.get('product_id')
@@ -442,7 +459,7 @@ Smart Store System
 
                 # ===== CHECK FOR REPLY =====
                 elif send_email.check_reply_to_test_subject(self.email_address, self.email_password, self.last_email_time):
-                    print("🔥 Turning ON fan")
+                    print(" Turning ON fan")
                     gpio_controller.spinMotor()
                     self.toggle_on(1)
                     self.toggle_on(2)
@@ -466,7 +483,7 @@ Smart Store System
             print(self.msp01_data)
             return self.msp01_data
         
-    # 👇 functions GUI can call
+    # functions GUI can call
     def get_fridge1_temp(self):
         return self.data.fridge1Temperature
 
@@ -483,7 +500,7 @@ Smart Store System
         temp = self.data.fridge1Temperature
         if temp is not None and temp > threshold:
             if not self.email_sent:  # ✅ only send once
-                subject = "Fridge Alert 🚨"
+                subject = "Fridge Alert "
                 body = f"The current temperature is {temp}°C. Would you like to turn on the fan?"
                 send_email.send_email(
                     subject=subject,
@@ -516,7 +533,7 @@ Smart Store System
                 print(f"Fridge 1: {f1}°C")
 
                 if f1 > self.threshold:
-                    print("⚠️ Fridge 1 temperature too high!")
+                    print("Fridge 1 temperature too high!")
 
                     # Send email once
                     if not fridge1_alert_sent:
@@ -529,7 +546,7 @@ Smart Store System
                         )
                         fridge1_alert_sent = True
 
-                    # ✅ Check for YES reply
+                    # Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 1")
                         self.toggle_on(1)
@@ -546,7 +563,7 @@ Smart Store System
                 print(f"Fridge 2: {f2}°C")
 
                 if f2 > self.threshold:
-                    print("⚠️ Fridge 2 temperature too high!")
+                    print(" Fridge 2 temperature too high!")
 
                     # Send email once
                     if not fridge2_alert_sent:
@@ -559,7 +576,7 @@ Smart Store System
                         )
                         fridge2_alert_sent = True
 
-                    # ✅ Check for YES reply
+                    #  Check for YES reply
                     if send_email.check_reply_to_test_subject(self.email_address, self.email_password):
                         print("🔥 Turning ON fan for Fridge 2")
                         self.toggle_on(2)
